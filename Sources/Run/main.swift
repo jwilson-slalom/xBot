@@ -3,4 +3,5 @@ import Foundation
 
 //setenv("CFNETWORK_DIAGNOSTICS", "3", 1)
 
-try app(.detect()).run()
+_ = try app(.detect()).asyncRun()
+RunLoop.main.run()
