@@ -30,5 +30,10 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     migrations.add(model: Todo.self, database: .sqlite)
     services.register(migrations)
 
+    guard let botUserApiKey = Environment.get("BotUserAPIKey") else { throw Abort(.internalServerError) }
+    services.register { container -> APIKeyStorage in
+        return APIKeyStorage(botUserApiKey: botUserApiKey)
+    }
+
     try services.register(SlackKitProvider())
 }
