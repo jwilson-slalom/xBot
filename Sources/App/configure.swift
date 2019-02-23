@@ -7,15 +7,17 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     try services.register(FluentSQLiteProvider())
 
     // Register routes to the router
-    let router = EngineRouter.default()
-    try routes(router)
-    services.register(router, as: Router.self)
+//    let router = EngineRouter.default()
+//    try routes(router)
+//    services.register(router, as: Router.self)
 
     // Register middleware
     var middlewares = MiddlewareConfig() // Create _empty_ middleware config
     // middlewares.use(FileMiddleware.self) // Serves files from `Public/` directory
     middlewares.use(ErrorMiddleware.self) // Catches errors and converts to HTTP response
     services.register(middlewares)
+
+    services.register(SQLiteTodoRepository.self)
 
     // Configure a SQLite database
     let sqlite = try SQLiteDatabase(storage: .memory)
