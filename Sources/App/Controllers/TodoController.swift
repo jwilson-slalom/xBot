@@ -2,6 +2,7 @@ import Vapor
 
 /// Controls basic CRUD operations on `Todo`s.
 final class TodoController {
+
     private let todoRepository: TodoRepository
 
     init(todoRepository: TodoRepository) {
@@ -18,5 +19,19 @@ final class TodoController {
         return try req.content.decode(Todo.self).flatMap { todo in
             return self.todoRepository.save(user: todo)
         }
+    }
+}
+
+extension TodoController: RouteCollection {
+    func boot(router: Router) throws {
+        router.get("todos", use: all)
+        router.post("todos", use: create)
+    }
+}
+
+extension TodoController: ServiceType {
+    static func makeService(for container: Container) throws -> TodoController {
+        let todoRepository = try container.make(TodoRepository.self)
+        return TodoController(todoRepository: todoRepository)
     }
 }

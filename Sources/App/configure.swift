@@ -6,10 +6,11 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     // Register providers first
     try services.register(FluentSQLiteProvider())
 
-    // Register routes to the router
-//    let router = EngineRouter.default()
-//    try routes(router)
-//    services.register(router, as: Router.self)
+    services.register(Router.self) { container -> EngineRouter in
+        let router = EngineRouter.default()
+        try routes(router, container)
+        return router
+    }
 
     // Register middleware
     var middlewares = MiddlewareConfig() // Create _empty_ middleware config
@@ -32,10 +33,8 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     migrations.add(model: Todo.self, database: .sqlite)
     services.register(migrations)
 
-    guard let botUserApiKey = Environment.get("BotUserAPIKey") else { throw Abort(.internalServerError) }
-    services.register { container -> APIKeyStorage in
-        return APIKeyStorage(botUserApiKey: botUserApiKey)
-    }
+    services.register(TodoController.self)
+    services.register(APIKeyStorage.self)
 
     try services.register(SlackKitProvider())
 }

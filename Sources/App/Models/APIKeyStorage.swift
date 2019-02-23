@@ -7,6 +7,13 @@
 
 import Vapor
 
-struct APIKeyStorage: Service {
+struct APIKeyStorage {
     let botUserApiKey: String
+}
+
+extension APIKeyStorage: ServiceType {
+    static func makeService(for container: Container) throws -> APIKeyStorage {
+        guard let botUserApiKey = Environment.get("BotUserAPIKey") else { throw Abort(.internalServerError) }
+        return APIKeyStorage(botUserApiKey: botUserApiKey)
+    }
 }
