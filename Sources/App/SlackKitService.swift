@@ -10,20 +10,17 @@ import SlackKit
 import Starscream
 
 final class SlackKitService {
-    var bot: SlackKit
 
-    var apiKeyStorage: APIKeyStorage?
+    let bot = SlackKit()
+    let apiKeyStorage: APIKeyStorage
 
-    init() {
-        bot = SlackKit()
+    init(apiKeyStorage: APIKeyStorage) {
+        self.apiKeyStorage = apiKeyStorage
     }
 
     public func registerRTMConnection(with container: Container) {
-        guard let apiKeyStorage = apiKeyStorage else {
-            print("No API Key was configurd")
-            return
-        }
-        bot.addRTMBotWithAPIToken(apiKeyStorage.botUserApiKey)
+
+        bot.addRTMBotWithAPIToken(apiKeyStorage.botUserAPIKey)
 
         bot.notificationForEvent(.message) { event, clientConnection in
 
@@ -45,22 +42,23 @@ final class SlackKitService {
     }
 }
 extension SlackKitService: ServiceType {
+
     static func makeService(for container: Container) throws -> SlackKitService {
-        return .init()
+        let apiKeyStorage = try container.make(APIKeyStorage.self)
+
+        return SlackKitService(apiKeyStorage: apiKeyStorage)
     }
 }
 
-public final class SlackKitProvider: Provider {
+public struct SlackKitProvider: Provider {
+
     public func register(_ services: inout Services) throws {
         services.register(SlackKitService.self)
     }
 
     public func didBoot(_ container: Container) throws -> EventLoopFuture<Void> {
-        let apiKeyStorage = try container.make(APIKeyStorage.self)
 
         let slackKitService = try container.make(SlackKitService.self)
-        slackKitService.apiKeyStorage = apiKeyStorage
-
         slackKitService.registerRTMConnection(with: container)
 
         return .done(on: container)

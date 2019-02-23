@@ -8,5 +8,5 @@
 import Vapor
 
 struct APIKeyStorage: Service {
-    let botUserApiKey: String
+    let botUserAPIKey: String
 }

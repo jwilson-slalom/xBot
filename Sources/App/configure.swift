@@ -31,8 +31,9 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     services.register(migrations)
 
     guard let botUserApiKey = Environment.get("BotUserAPIKey") else { throw Abort(.internalServerError) }
-    services.register { container -> APIKeyStorage in
-        return APIKeyStorage(botUserApiKey: botUserApiKey)
+
+    services.register { _ in
+        APIKeyStorage(botUserAPIKey: botUserApiKey)
     }
 
     try services.register(SlackKitProvider())
