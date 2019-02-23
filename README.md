@@ -15,10 +15,10 @@ brew upgrade vapor
 
 Once Vapor is installed, navigate to repository location and run:
 ```
-vapor update
+vapor fetch
 ```
 
-If not prompted after running `vapor update`, then make sure to run:
+Then run:
 ```
 vapor xcode
 ```

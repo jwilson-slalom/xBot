@@ -7,7 +7,7 @@
 
 import Vapor
 
-public final class SlackKitProvider: Provider {
+public struct SlackKitProvider: Provider {
     public func register(_ services: inout Services) throws {
         services.register(SlackKitService.self)
     }
