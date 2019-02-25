@@ -11,17 +11,14 @@ import SlackKit
 final class SlackKitService {
     private let bot: SlackKit
     private let apiKeyStorage: APIKeyStorage
-    private let todoController: TodoController
-    private let container: Container
+    private let todoRepository: TodoRepository
 
     init(_ apiKeyStorage: APIKeyStorage,
-         todoController: TodoController,
-         container: Container) {
+         todoRepository: TodoRepository) {
 
         self.bot = SlackKit()
         self.apiKeyStorage = apiKeyStorage
-        self.todoController = todoController
-        self.container = container
+        self.todoRepository = todoRepository
     }
 
     public func registerRTMConnection() {
@@ -40,25 +37,18 @@ final class SlackKitService {
 
             let todo = Todo(title: "Created from Slack")
 
-            do {
-                let todoRequest = try todo.encode(using: self.container).flatMap { request in
-                    return try self.todoController.create(request)
+            let todoRequest = self.todoRepository.save(user: todo)
+            todoRequest.addAwaiter { request in
+                guard let todo = request.result, request.error == nil else {
+                    print("Could not handle todo request")
+                    return
                 }
 
-                todoRequest.addAwaiter { request in
-                    guard let todo = request.result, request.error == nil else {
-                        print("Could not handle todorequest")
-                        return
-                    }
-
-                    do {
-                        try self.sendMessage(using: connection, text: "Created Todo with title \(todo.title)", channelId: channelId)
-                    } catch {
-                        print("Error Sending Message: \(error)")
-                    }
+                do {
+                    try self.sendMessage(using: connection, text: "Created Todo with title \(todo.title)", channelId: channelId)
+                } catch {
+                    print("Error Sending Message: \(error)")
                 }
-            } catch {
-                print("Error handling todo request: \(error)")
             }
         }
     }
@@ -73,8 +63,8 @@ final class SlackKitService {
 extension SlackKitService: ServiceType {
     static public func makeService(for container: Container) throws -> SlackKitService {
         let apiKeyStorage = try container.make(APIKeyStorage.self)
-        let todoController = try container.make(TodoController.self)
+        let todoRepository = try container.make(TodoRepository.self)
 
-        return .init(apiKeyStorage, todoController: todoController, container: container)
+        return .init(apiKeyStorage, todoRepository: todoRepository)
     }
 }
