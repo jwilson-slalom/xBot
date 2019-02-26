@@ -26,13 +26,13 @@ final class SQLiteTodoRepository: TodoRepository {
 
     func all() -> Future<[Todo]> {
         return db.withConnection { conn in
-            return Todo.query(on: conn).all()
+            Todo.query(on: conn).all()
         }
     }
 
     func save(user: Todo) -> Future<Todo> {
         return db.withConnection { conn in
-            return user.save(on: conn)
+            user.save(on: conn)
         }
     }
 }
