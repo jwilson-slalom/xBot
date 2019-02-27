@@ -30,7 +30,7 @@ final class SlackKitService {
                 return
             }
 
-            guard let channelId = event.channel?.id else {
+            guard let channelId = event.channel?.id, event.message?.botID == nil else {
                 print("Bad Channel Id")
                 return
             }
@@ -39,13 +39,13 @@ final class SlackKitService {
 
             let todoRequest = self.todoRepository.save(user: todo)
             todoRequest.addAwaiter { request in
-                guard let todo = request.result, request.error == nil else {
+                guard let _ = request.result, request.error == nil else {
                     print("Could not handle todo request")
                     return
                 }
 
                 do {
-                    try self.sendMessage(using: connection, text: "Created Todo with title \(todo.title)", channelId: channelId)
+                    try self.sendMessage(using: connection, text: "Created Todo", channelId: channelId)
                 } catch {
                     print("Error Sending Message: \(error)")
                 }
