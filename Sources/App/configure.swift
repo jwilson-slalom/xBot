@@ -1,10 +1,12 @@
-import FluentSQLite
+//import FluentSQLite
+import FluentPostgreSQL
 import Vapor
 
 /// Called before your application initializes.
 public func configure(_ config: inout Config, _ env: inout Environment, _ services: inout Services) throws {
-    // Register providers first
-    try services.register(FluentSQLiteProvider())
+//	try services.register(FluentSQLiteProvider())
+	try services.register(FluentPostgreSQLProvider())
+	try services.register(SlackKitProvider())
 
     services.register(Router.self) { container -> EngineRouter in
         let router = EngineRouter.default()
@@ -14,27 +16,38 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
 
     // Register middleware
     var middlewares = MiddlewareConfig() // Create _empty_ middleware config
-    // middlewares.use(FileMiddleware.self) // Serves files from `Public/` directory
     middlewares.use(ErrorMiddleware.self) // Catches errors and converts to HTTP response
     services.register(middlewares)
 
-    services.register(SQLiteTodoRepository.self)
+//	services.register(SQLiteTodoRepository.self)
+    services.register(PostgresTodoRepository.self)
 
-    // Configure a SQLite database
-    let sqlite = try SQLiteDatabase(storage: .memory)
+//    let sqlite = try SQLiteDatabase(storage: .memory)
+
+	let config: PostgreSQLDatabaseConfig
+	if let databaseUrl = Environment.get("DATABASE_URL"), let herokuConfig = PostgreSQLDatabaseConfig(url: databaseUrl, transport: .unverifiedTLS) {
+		config = herokuConfig
+		print("Using Heroku Config")
+	} else {
+		print("Using Local Config")
+		config = PostgreSQLDatabaseConfig(hostname: "localhost", port: 5432, username: "postgres", database: "xbot", password: nil, transport: .cleartext)
+	}
+
+	let postgres = PostgreSQLDatabase(config: config)
 
     // Register the configured SQLite database to the database config.
     var databases = DatabasesConfig()
-    databases.add(database: sqlite, as: .sqlite)
+
+//    databases.add(database: sqlite, as: .sqlite)
+	databases.add(database: postgres, as: .psql)
     services.register(databases)
 
     // Configure migrations
     var migrations = MigrationConfig()
-    migrations.add(model: Todo.self, database: .sqlite)
+//	migrations.add(model: Todo.self, database: .sqlite)
+	migrations.add(model: Todo.self, database: .psql)
     services.register(migrations)
 
     services.register(TodoController.self)
     services.register(APIKeyStorage.self)
-
-    try services.register(SlackKitProvider())
 }
