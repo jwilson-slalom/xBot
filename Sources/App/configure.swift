@@ -1,10 +1,8 @@
-//import FluentSQLite
 import FluentPostgreSQL
 import Vapor
 
 /// Called before your application initializes.
 public func configure(_ config: inout Config, _ env: inout Environment, _ services: inout Services) throws {
-//	try services.register(FluentSQLiteProvider())
 	try services.register(FluentPostgreSQLProvider())
 	try services.register(SlackKitProvider())
 
@@ -19,10 +17,7 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     middlewares.use(ErrorMiddleware.self) // Catches errors and converts to HTTP response
     services.register(middlewares)
 
-//	services.register(SQLiteTodoRepository.self)
     services.register(PostgresTodoRepository.self)
-
-//    let sqlite = try SQLiteDatabase(storage: .memory)
 
 	let config: PostgreSQLDatabaseConfig
 	if let databaseUrl = Environment.get("DATABASE_URL"), let herokuConfig = PostgreSQLDatabaseConfig(url: databaseUrl, transport: .unverifiedTLS) {
@@ -37,14 +32,11 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
 
     // Register the configured SQLite database to the database config.
     var databases = DatabasesConfig()
-
-//    databases.add(database: sqlite, as: .sqlite)
 	databases.add(database: postgres, as: .psql)
     services.register(databases)
 
     // Configure migrations
     var migrations = MigrationConfig()
-//	migrations.add(model: Todo.self, database: .sqlite)
 	migrations.add(model: Todo.self, database: .psql)
     services.register(migrations)
 
