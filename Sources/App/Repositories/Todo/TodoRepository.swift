@@ -39,7 +39,7 @@ final class PostgresTodoRepository: TodoRepository {
 
 //MARK: - ServiceType conformance
 extension PostgresTodoRepository {
-    static let serviceSupports: [Any.Type] = [TodoRepository.self]
+	static let serviceSupports: [Any.Type] = [TodoRepository.self]
 
 	static func makeService(for worker: Container) throws -> PostgresTodoRepository {
 		return .init(try worker.connectionPool(to: .psql))
