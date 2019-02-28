@@ -1,7 +1,7 @@
 import Vapor
 
 /// Register your application's routes here.
-public func routes(_ router: Router, _ container: Container) throws {}
+public func routes(_ router: Router, _ container: Container) throws {
     let roomController = try container.make(RoomController.self)
     try router.register(collection: roomController)
 
