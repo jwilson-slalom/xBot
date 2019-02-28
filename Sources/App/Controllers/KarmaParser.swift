@@ -15,7 +15,7 @@ final class KarmaParser {
         let positiveRegex = try! NSRegularExpression(pattern: posRegex)
 
         guard let match = positiveRegex.firstMatch(in: message, range: NSRange(location: 0, length: message.count)) else {
-			return []
+            return []
         }
 
         return match.captureGroups(testedString: message)

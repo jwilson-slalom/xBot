@@ -36,7 +36,7 @@ final class SlackKitService {
             }
 
             if let message = event.text {
-				let karmaParser = KarmaParser()
+                let karmaParser = KarmaParser()
                 let captureGroups = karmaParser.captureGroupsFrom(message: message)
 
                 var outgoingMessage = ""
