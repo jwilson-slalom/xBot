@@ -14,8 +14,15 @@ final class KarmaController {
         return karmaRepository.all()
     }
 
-    /// Saves a decoded `Todo` to the database.
+    /// Saves a decoded `Karma` to the database.
     func create(_ req: Request) throws -> Future<Karma> {
+        return try req.content.decode(Karma.self).flatMap { karma in
+            return self.karmaRepository.save(karma: karma)
+        }
+    }
+
+    /// Saves a decoded `Karma` to the database.
+    func update(_ req: Request) throws -> Future<Karma> {
         return try req.content.decode(Karma.self).flatMap { karma in
             return self.karmaRepository.save(karma: karma)
         }
@@ -26,6 +33,7 @@ extension KarmaController: RouteCollection {
     func boot(router: Router) throws {
         router.get("karma", use: all)
         router.post("karma", use: create)
+        router.put("karma", use: update)
     }
 }
 
