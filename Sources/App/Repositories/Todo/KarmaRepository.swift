@@ -33,8 +33,10 @@ final class SQLiteKarmaRepository: KarmaRepository {
 
     func save(karma: Karma) -> Future<Karma> {
         return db.withConnection { conn in
-            return karma.save(on: conn)
-        }
+			return karma.create(on: conn).catchFlatMap { error in
+				return karma.update(on: conn)
+			}
+		}
     }
 }
 
