@@ -13,10 +13,12 @@ import Vapor
 /// Associate a karma (rating) with a unique entity
 final class Karma: SQLiteStringModel {
     var id: String?
+	var idIsFromUser: Bool
     var karma: Int
 
-    init(id: String?, karma: Int = 0) {
+	init(id: String?, karma: Int = 0, idIsFromUser: Bool = true) {
         self.id = id
+		self.idIsFromUser = idIsFromUser
         self.karma = karma
     }
 }

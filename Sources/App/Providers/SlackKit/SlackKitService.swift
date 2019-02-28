@@ -11,14 +11,14 @@ import SlackKit
 final class SlackKitService {
     private let bot: SlackKit
     private let apiKeyStorage: APIKeyStorage
-    private let todoRepository: KarmaRepository
+    private let karmaRepository: KarmaRepository
 
     init(_ apiKeyStorage: APIKeyStorage,
-         todoRepository: KarmaRepository) {
+         karmaRepository: KarmaRepository) {
 
         self.bot = SlackKit()
         self.apiKeyStorage = apiKeyStorage
-        self.todoRepository = todoRepository
+        self.karmaRepository = karmaRepository
     }
 
     public func registerRTMConnection() {
@@ -66,8 +66,8 @@ final class SlackKitService {
 extension SlackKitService: ServiceType {
     static public func makeService(for container: Container) throws -> SlackKitService {
         let apiKeyStorage = try container.make(APIKeyStorage.self)
-        let todoRepository = try container.make(KarmaRepository.self)
+        let karmaRepository = try container.make(KarmaRepository.self)
 
-        return .init(apiKeyStorage, todoRepository: todoRepository)
+        return .init(apiKeyStorage, karmaRepository: karmaRepository)
     }
 }
