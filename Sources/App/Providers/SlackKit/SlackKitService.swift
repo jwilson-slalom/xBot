@@ -45,33 +45,6 @@ final class SlackKitService {
                 self.handleEvent(event, onConnection: connection)
             }
         }
-//        bot.notificationForEvent(.message) { event, clientConnection in
-//            guard let connection = clientConnection else {
-//                print("Bad ClientConnection")
-//                return
-//            }
-//
-//            guard let channelId = event.channel?.id, event.message?.botID == nil else {
-//                print("Bad Channel Id")
-//                return
-//            }
-//
-//            let todo = Karma(id: "Chameleon")
-//
-//            let todoRequest = self.todoRepository.save(karma: todo)
-//            todoRequest.addAwaiter { request in
-//                guard let _ = request.result, request.error == nil else {
-//                    print("Could not handle todo request")
-//                    return
-//                }
-//
-//                do {
-//                    try self.sendMessage(using: connection, text: "Created Todo", channelId: channelId)
-//                } catch {
-//                    print("Error Sending Message: \(error)")
-//                }
-//            }
-//        }
     }
 
     private func handleEvent(_ event: Event, onConnection connection: ClientConnection) {
