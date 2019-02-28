@@ -5,3 +5,4 @@ xcuserdata
 *.resolved
 DerivedData/
 .DS_Store
+secrets.json
