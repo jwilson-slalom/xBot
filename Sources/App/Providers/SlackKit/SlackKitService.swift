@@ -35,17 +35,20 @@ final class SlackKitService {
                 return
             }
 
-            let todo = Karma(id: "Chameleon")
+            if let message = event.text {
+				let karmaParser = KarmaParser()
+                let captureGroups = karmaParser.captureGroupsFrom(message: message)
 
-            let todoRequest = self.todoRepository.save(karma: todo)
-            todoRequest.addAwaiter { request in
-                guard let _ = request.result, request.error == nil else {
-                    print("Could not handle todo request")
-                    return
+                var outgoingMessage = ""
+                for group in captureGroups {
+                    outgoingMessage.append("\(group) | ")
                 }
 
                 do {
-                    try self.sendMessage(using: connection, text: "Created Todo", channelId: channelId)
+                    guard !outgoingMessage.isEmpty else {
+                        return
+                    }
+                    try self.sendMessage(using: connection, text: outgoingMessage, channelId: channelId)
                 } catch {
                     print("Error Sending Message: \(error)")
                 }
