@@ -18,7 +18,7 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     middlewares.use(ErrorMiddleware.self) // Catches errors and converts to HTTP response
     services.register(middlewares)
 
-    services.register(SQLiteTodoRepository.self)
+    services.register(SQLiteKarmaRepository.self)
 
     // Configure a SQLite database
     let sqlite = try SQLiteDatabase(storage: .memory)
@@ -30,10 +30,10 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
 
     // Configure migrations
     var migrations = MigrationConfig()
-    migrations.add(model: Todo.self, database: .sqlite)
+    migrations.add(model: Karma.self, database: .sqlite)
     services.register(migrations)
 
-    services.register(TodoController.self)
+    services.register(KarmaController.self)
     services.register(APIKeyStorage.self)
 
     try services.register(SlackKitProvider())

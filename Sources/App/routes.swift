@@ -2,7 +2,7 @@ import Vapor
 
 /// Register your application's routes here.
 public func routes(_ router: Router, _ container: Container) throws {
-    let todoController = try container.make(TodoController.self)
+    let todoController = try container.make(KarmaController.self)
     try router.register(collection: todoController)
 
     // Basic "It works" example
