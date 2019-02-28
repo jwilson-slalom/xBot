@@ -8,7 +8,7 @@
 import Foundation
 
 final class KarmaParser {
-	private let posRegex = "^([A-Za-z0-9\\s_@#<>|]*)\\s?(\\+{1,4}\\+)"
+    private let posRegex = "^([A-Za-z0-9\\s_@#<>|]*)\\s?(\\+{1,4}\\+)"
     private let negRegex = "^([A-Za-z0-9\\s_@#<>|]*)\\s?(-{1,4}-)"
 
     func captureGroupsFrom(message: String) -> [String] {
