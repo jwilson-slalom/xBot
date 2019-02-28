@@ -4,6 +4,8 @@ import Vapor
 public func routes(_ router: Router, _ container: Container) throws {
     let todoController = try container.make(KarmaController.self)
     try router.register(collection: todoController)
+    let roomController = try container.make(RoomController.self)
+    try router.register(collection: roomController)
 
     // Basic "It works" example
     router.get { req in
