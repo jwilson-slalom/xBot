@@ -25,7 +25,6 @@ final class SlackKitService {
         bot.addRTMBotWithAPIToken(apiKeyStorage.botUserApiKey, rtm: VaporEngineRTM())
 
         bot.notificationForEvent(.message) { event, clientConnection in
-            /*
             guard let connection = clientConnection else {
                 print("Bad ClientConnection")
                 return
@@ -35,7 +34,25 @@ final class SlackKitService {
                 print("Bad Channel Id")
                 return
             }
-            */
+
+            if let message = event.text {
+                let karmaParser = KarmaParser()
+                let captureGroups = karmaParser.captureGroupsFrom(message: message)
+
+                var outgoingMessage = ""
+                for group in captureGroups {
+                    outgoingMessage.append("\(group) | ")
+                }
+
+                do {
+                    guard !outgoingMessage.isEmpty else {
+                        return
+                    }
+                    try self.sendMessage(using: connection, text: outgoingMessage, channelId: channelId)
+                } catch {
+                    print("Error Sending Message: \(error)")
+                }
+            }
         }
     }
 
