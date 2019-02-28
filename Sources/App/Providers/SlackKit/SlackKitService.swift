@@ -22,7 +22,7 @@ final class SlackKitService {
     }
 
     public func registerRTMConnection() {
-        bot.addRTMBotWithAPIToken(apiKeyStorage.botUserApiKey)
+        bot.addRTMBotWithAPIToken(apiKeyStorage.botUserApiKey, rtm: VaporEngineRTM())
 
         bot.notificationForEvent(.message) { event, clientConnection in
             guard let connection = clientConnection else {
