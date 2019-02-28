@@ -34,6 +34,7 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     migrations.add(model: Karma.self, database: .sqlite)
     services.register(migrations)
 
+    services.register(OnTapController.self)
     services.register(KarmaController.self)
     services.register(APIKeyStorage.self)
 
