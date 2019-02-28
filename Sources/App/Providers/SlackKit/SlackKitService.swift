@@ -11,10 +11,10 @@ import SlackKit
 final class SlackKitService {
     private let bot: SlackKit
     private let apiKeyStorage: APIKeyStorage
-    private let todoRepository: TodoRepository
+    private let todoRepository: KarmaRepository
 
     init(_ apiKeyStorage: APIKeyStorage,
-         todoRepository: TodoRepository) {
+         todoRepository: KarmaRepository) {
 
         self.bot = SlackKit()
         self.apiKeyStorage = apiKeyStorage
@@ -35,9 +35,9 @@ final class SlackKitService {
                 return
             }
 
-            let todo = Todo(title: "Created from Slack")
+            let todo = Karma(id: "Chameleon")
 
-            let todoRequest = self.todoRepository.save(user: todo)
+            let todoRequest = self.todoRepository.save(karma: todo)
             todoRequest.addAwaiter { request in
                 guard let _ = request.result, request.error == nil else {
                     print("Could not handle todo request")
@@ -63,7 +63,7 @@ final class SlackKitService {
 extension SlackKitService: ServiceType {
     static public func makeService(for container: Container) throws -> SlackKitService {
         let apiKeyStorage = try container.make(APIKeyStorage.self)
-        let todoRepository = try container.make(TodoRepository.self)
+        let todoRepository = try container.make(KarmaRepository.self)
 
         return .init(apiKeyStorage, todoRepository: todoRepository)
     }

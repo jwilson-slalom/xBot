@@ -8,40 +8,41 @@
 import Vapor
 import FluentSQLite
 
-protocol TodoRepository: ServiceType {
-    func all() -> Future<[Todo]>
-    func save(user: Todo) -> Future<Todo>
+protocol KarmaRepository: ServiceType {
+    func all() -> Future<[Karma]>
+    func save(karma: Karma) -> Future<Karma>
 }
 
 extension Database {
     public typealias ConnectionPool = DatabaseConnectionPool<ConfiguredDatabase<Self>>
 }
 
-final class SQLiteTodoRepository: TodoRepository {
+final class SQLiteKarmaRepository: KarmaRepository {
+
     let db: SQLiteDatabase.ConnectionPool
 
     init(_ db: SQLiteDatabase.ConnectionPool) {
         self.db = db
     }
 
-    func all() -> Future<[Todo]> {
+    func all() -> Future<[Karma]> {
         return db.withConnection { conn in
-            return Todo.query(on: conn).all()
+            return Karma.query(on: conn).all()
         }
     }
 
-    func save(user: Todo) -> Future<Todo> {
+    func save(karma: Karma) -> Future<Karma> {
         return db.withConnection { conn in
-            return user.save(on: conn)
+            return karma.save(on: conn)
         }
     }
 }
 
 //MARK: - ServiceType conformance
-extension SQLiteTodoRepository {
-    static let serviceSupports: [Any.Type] = [TodoRepository.self]
+extension SQLiteKarmaRepository {
+    static let serviceSupports: [Any.Type] = [KarmaRepository.self]
 
-    static func makeService(for worker: Container) throws -> SQLiteTodoRepository {
+    static func makeService(for worker: Container) throws -> SQLiteKarmaRepository {
         return .init(try worker.connectionPool(to: .sqlite))
     }
 }
