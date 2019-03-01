@@ -32,6 +32,7 @@ final class SlackKitService {
 
     public func registerRTMConnection() {
         bot.addRTMBotWithAPIToken(apiKeyStorage.botUserApiKey, rtm: VaporEngineRTM())
+        bot.addWebAPIAccessWithToken(apiKeyStorage.botUserApiKey)
 
         let eventTypes: [EventType] =
         [
@@ -67,10 +68,14 @@ public struct SlackMessageSender {
         self.clientConnection = clientConnection
     }
 
-    public func sendMessage(text: String, channelId: String) throws {
-        guard let rtm = clientConnection.rtm else { throw Abort(.internalServerError) }
+    public func sendMessage(text: String, channelId: String, attachments: [Attachment]? = nil) throws {
+        guard let web = clientConnection.webAPI else { throw Abort(.internalServerError) }
 
-        try rtm.sendMessage(text, channelID: channelId)
+        web.sendMessage(channel: channelId, text: text, attachments: attachments, success: { (ts, channel) in
+
+        }, failure: { Error in
+            
+        })
     }
 }
 

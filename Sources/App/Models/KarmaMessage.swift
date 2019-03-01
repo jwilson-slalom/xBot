@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SlackKit
 
 struct KarmaMessage {
     let user: String
@@ -22,21 +23,16 @@ extension KarmaMessage {
         return karma >= 0 ? "increased" : "decreased"
     }
 
-    func slackRepsonseJSON() -> String {
-        let user = slackUser()
-        let string = """
-        {
-            "attachments": [
-                {
-                    "fallback": "\(user)’s karma increased by \(karma)",
-                    "color": "\(messageColor())",
-                    "pretext": "\(user)",
-                    "text": "\(user)’s karma \(crease()) by \(karma)"
-                }
-            ]
-        }
-        """
-        return string
+    func defaultMessage() -> String {
+        return "\(user)’s karma \(crease()) by \(karma)"
+    }
+
+    func slackAttachment() -> Attachment {
+//        let user = slackUser()
+        return Attachment(attachment: ["fallback": defaultMessage(),
+            "color": messageColor(),
+//            "pretext": user,
+            "text": "Karma \(crease()) by \(abs(karma))"])
     }
 
     func slackUser() -> String {
