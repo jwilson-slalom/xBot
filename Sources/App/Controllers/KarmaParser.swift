@@ -8,17 +8,45 @@
 import Vapor
 
 final class KarmaParser {
-    private let posRegex = "^([A-Za-z0-9\\s_@#<>|]*)\\s?(\\+{1,4}\\+)"
-    private let negRegex = "^([A-Za-z0-9\\s_@#<>|]*)\\s?(-{1,4}-)"
+    private let posRegex = "^(<@([\\w].+?)>)[\\s]*(\\+{1,5}\\+)"
+    private let negRegex = "^(<@([\\w].+?)>)[\\s]*(-{1,5}-)"
 
-    func captureGroupsFrom(message: String) -> [String] {
-        let positiveRegex = try! NSRegularExpression(pattern: posRegex)
+    let positiveRegex: NSRegularExpression!
+    let negativeRegex: NSRegularExpression!
 
-        guard let match = positiveRegex.firstMatch(in: message, range: NSRange(location: 0, length: message.count)) else {
-            return []
+    init() {
+        positiveRegex = try! NSRegularExpression(pattern: posRegex)
+        negativeRegex = try! NSRegularExpression(pattern: negRegex)
+    }
+
+    func captureGroupsFrom(message: String) -> [KarmaMessage] {
+        if let match = findMatch(regex: positiveRegex, message: message) {
+            return match
         }
 
-        return match.captureGroups(testedString: message)
+        if let match = findMatch(regex: negativeRegex, message: message) {
+            return match
+        }
+
+        return []
+    }
+
+    func findMatch(regex: NSRegularExpression, message: String) -> [KarmaMessage]? {
+        if let match = regex.firstMatch(in: message, range: NSRange(location: 0, length: message.count)) {
+            return [createMessage(match: match, message: message)]
+        }
+        return []
+    }
+
+    func createMessage(match: NSTextCheckingResult, message: String) -> KarmaMessage {
+        let parts = match.captureGroups(testedString: message)
+        let karma: Int
+        if parts[2].contains("+") {
+            karma = parts[2].count - 1
+        } else {
+            karma = (parts[2].count - 1) * -1
+        }
+        return KarmaMessage(user: parts[1], karma: karma)
     }
 }
 
@@ -31,8 +59,7 @@ extension KarmaParser: ServiceType {
 private extension NSTextCheckingResult {
     func captureGroups(testedString:String) -> [String] {
         var groups = [String]()
-        for i in  1 ..< self.numberOfRanges
-        {
+        for i in  1 ..< self.numberOfRanges {
             let group = String(testedString[Range(self.range(at: i), in: testedString)!])
             groups.append(group)
         }
