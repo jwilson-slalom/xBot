@@ -8,8 +8,8 @@
 import Vapor
 
 final class KarmaParser {
-    private let posRegex = "^(<@([\\w].+?)>)[\\s]*(\\+{1,5}\\+)"
-    private let negRegex = "^(<@([\\w].+?)>)[\\s]*(-{1,5}-)"
+    private let posRegex = "(<@([\\w].+?)>)[\\s]*(\\+{1,5}\\+)"
+    private let negRegex = "(<@([\\w].+?)>)[\\s]*(-{1,5}-)"
 
     let positiveRegex: NSRegularExpression!
     let negativeRegex: NSRegularExpression!
