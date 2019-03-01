@@ -5,6 +5,8 @@ import enum SlackKit.EventType
 /// Controls basic CRUD operations on `Karma`s.
 final class KarmaController {
 
+    var genericMessageSender: SlackMessageSender?
+
     private let karmaRepository: KarmaRepository
     private let karmaParser: KarmaParser
 

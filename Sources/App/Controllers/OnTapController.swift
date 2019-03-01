@@ -10,38 +10,191 @@ import HTTP
 import Routing
 import class SlackKit.Event
 import enum SlackKit.EventType
+import struct SlackKit.Attachment
+
+struct OnTapMessage {
+
+    static func newBeerAttachment(for tap: Tap, with beer: Beer) -> Attachment {
+
+        return Attachment(attachment: ["fallback": "New beer",
+                                       "color": "#36a64f",
+                                       "title": "\(beer.name) is now on the \(tap == .left ? "Left" : "Right") Tap 🍻",
+                                       "title_link": beer.untappdURL.absoluteString,
+                                       "fields": [
+                                            "value": beer.breweryName,
+                                            "short": false
+                                            ],
+                                       "footer": "Brought to you by: _onTap"
+                                        ]
+                        )
+    }
+
+    static func kegStatusAttachments(with kegSystem: KegSystem) -> [Attachment] {
+
+        func beerText(_ beer: Beer?) -> String? {
+            guard let beer = beer else { return nil }
+
+            return beer.name + " - " + beer.breweryName
+        }
+        return
+            [Attachment(attachment:
+                [
+                    "fallback": "Required plain-text summary of the attachment.",
+                    "color": "#36a64f",
+                    "pretext": "🍻",
+                    "title": leftBeer == nil ? "Offline" : "Left Tap",
+                    "title_link": kegSystem.leftTap?.untappdURL.absoluteString as Any,
+                    "text": beerText(kegSystem.leftTap) as Any
+                ]),
+             Attachment(attachment:
+                [
+                    "fallback": "Required plain-text summary of the attachment.",
+                    "color": "#36a64f",
+                    "title": leftBeer == nil ? "Offline" : "Right Tap",
+                    "title_link": kegSystem.rightTap?.untappdURL.absoluteString as Any,
+                    "text": beerText(kegSystem.rightTap) as Any
+                ])
+        ]
+    }
+}
+
+struct KegSystem: Content {
+    var leftTap: Beer?
+    var rightTap: Beer?
+}
+
+// Absolutely not threadsafe
+fileprivate var leftBeerChangeCount: Int64 = -1
+fileprivate var leftBeer: Beer?
+
+fileprivate var rightBeerChangeCount: Int64 = -1
+fileprivate var rightBeer: Beer?
+
+func set(beer newBeer: Beer?, on tap: Tap) -> Bool {
+    var oldValue: Beer?
+    switch tap {
+    case .left:
+        oldValue = leftBeer
+        leftBeer = newBeer
+    case .right:
+        oldValue = rightBeer
+        rightBeer = newBeer
+    }
+
+    func different(_ oldBeer: Beer?, _ newBeer: Beer?) -> Bool {
+        switch (oldValue, newBeer) {
+        case let (old?, new?) where old.untappdID != new.untappdID:
+            fallthrough
+        case (.none, _), (_, .none):
+            return true
+        default:
+            return false
+        }
+    }
+
+    // Ignores the initial set after the server starts
+
+    if different(oldValue, newBeer) {
+        switch tap {
+        case .left:
+            leftBeerChangeCount += 1
+            if leftBeerChangeCount > 0 {
+                return true
+            }
+        case .right:
+            rightBeerChangeCount += 1
+            if rightBeerChangeCount > 0 {
+                return true
+            }
+        }
+    }
+
+    return false
+}
 
 final class OnTapController: RouteCollection, ServiceType {
 
-    private let onTapRepository: OnTapRepository
+    let slackKitService: SlackKitService
 
-    static func makeService(for container: Container) throws -> OnTapController {
-        return OnTapController(onTapRepository: try container.make(OnTapRepository.self))
+    init(slackKitService: SlackKitService) {
+        self.slackKitService = slackKitService
     }
 
-    init(onTapRepository: OnTapRepository) {
-        self.onTapRepository = onTapRepository
+    static func makeService(for container: Container) throws -> OnTapController {
+        return OnTapController(slackKitService: App.slackKitService)
     }
 
     func boot(router: Router) throws {
         let onTapGroup = router.grouped("/ontap")
-        onTapGroup.post(Beer.self, at: "/update", Tap.parameter, use: update)
+        onTapGroup.post(Beer.self, at: "/tap", Tap.parameter, use: update)
+        onTapGroup.delete("/tap", Tap.parameter, use: delete)
         onTapGroup.get("/taps", use: getBeers)
     }
 
-    func getBeers(request: Request) -> EventLoopFuture<[Beer]> {
-        return onTapRepository.all()
+    func getBeers(request: Request) -> KegSystem {
+        return KegSystem(leftTap: leftBeer, rightTap: rightBeer)
     }
 
-    func update(req: Request, content: Beer) throws -> EventLoopFuture<[Beer]> {
-//        var parameter: Tap = try req.parameters.next()
+    func update(request: Request, content: Beer) -> EventLoopFuture<Response> {
+        guard let deviceID = request.http.headers.firstValue(name: .onTapDeviceIdentifier),
+                deviceID == "21F17F00-A94B-4BE9-A03D-BA6A20D709FC" else {
 
-        return try req.content.decode(Beer.self)
-            .then { beer in
-                self.onTapRepository.save(beer: [beer])
+            return request.response().encode(status: .unauthorized, for: request)
+        }
+
+        do {
+            let tap = try request.parameters.next(Tap.self)
+
+            print("Received \(content) for tap \(tap)")
+
+            if set(beer: content, on: tap) {
+                print("Tap \(tap) changed to: \(content)")
+
+                try slackKitService.sendMessage(
+                    text: "",
+                    channelId: waterCoolerChannelID,
+                    attachments: [OnTapMessage.newBeerAttachment(for: tap, with: content)]
+                )
             }
+
+            // TODO: Update slack if the beers changed
+            return KegSystem(leftTap: leftBeer, rightTap: rightBeer).encode(status: .ok, for: request)
+        } catch let error as RoutingError {
+            return error.description.encode(status: .badRequest, for: request)
+        } catch {
+            return request.response().encode(status: .internalServerError, for: request)
+        }
+    }
+
+    func delete(request: Request) -> EventLoopFuture<Response> {
+        guard let deviceID = request.http.headers.firstValue(name: .onTapDeviceIdentifier),
+                deviceID == "21F17F00-A94B-4BE9-A03D-BA6A20D709FC" else {
+
+            return request.response().encode(status: .unauthorized, for: request)
+        }
+
+        do {
+
+            let tap = try request.parameters.next(Tap.self)
+            if set(beer: nil, on: tap) {
+                print("Tap \(tap) changed to: \(Optional<Beer>.none)")
+            }
+
+            return KegSystem(leftTap: leftBeer, rightTap: rightBeer).encode(status: .ok, for: request)
+
+        } catch let error as RoutingError {
+            return error.description.encode(status: .badRequest, for: request)
+        } catch {
+            return request.response().encode(status: .internalServerError, for: request)
+        }
     }
 }
+
+extension HTTPHeaderName {
+    static let onTapDeviceIdentifier = HTTPHeaderName("x-device-identifier")
+}
+
+let waterCoolerChannelID = "CGL7CJ03W"
 
 extension OnTapController: SlackHandler {
 
@@ -51,24 +204,15 @@ extension OnTapController: SlackHandler {
 
         if event.message?.text?.contains("beer") ?? false {
 
-            onTapRepository
-                .all()
-                .do { beers in
-                    try! slack.sendMessage(
-                        text: "Maybe you should try one of these beers either: \(beers[0]) or \(beers[1])",
-                        channelId: event.channel!.id!
-                    )
-                }
-                .catch { error in
-                    print("Failed to send slack response: \(error)")
-                }
+            do {
+                try slack.sendMessage(
+                    text: "",
+                    channelId: event.channel!.id!,
+                    attachments: OnTapMessage.kegStatusAttachments(with: KegSystem(leftTap: leftBeer, rightTap: rightBeer))
+                )
+            } catch {
+                print("Failed to send slack message: \(error)")
+            }
         }
-    }
-}
-
-extension EmptyCollection: ResponseEncodable where Element == Void {
-
-    public func encode(for req: Request) throws -> EventLoopFuture<Response> {
-        return req.response().encode(status: .ok, headers: HTTPHeaders(), for: req)
     }
 }
