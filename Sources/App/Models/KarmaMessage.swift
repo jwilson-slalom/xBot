@@ -27,12 +27,12 @@ extension KarmaMessage {
         return "\(user)’s karma \(changed()) by \(karma)"
     }
 
-    func slackAttachment() -> Attachment {
+    func slackAttachment(with newKarmaTotal: Int) -> Attachment {
 //        let user = slackUser()
         return Attachment(attachment: ["fallback": defaultMessage(),
             "color": messageColor(),
 //            "pretext": user,
-            "text": "Karma \(changed()) by \(abs(karma))"])
+            "text": "Karma \(changed()) to \(newKarmaTotal)"])
     }
 
     func slackUser() -> String {

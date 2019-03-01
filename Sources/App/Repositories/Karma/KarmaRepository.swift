@@ -11,6 +11,7 @@ import FluentSQLite
 protocol KarmaRepository: ServiceType {
     func all() -> Future<[Karma]>
     func save(karma: Karma) -> Future<Karma>
+    func find(id: String) -> Future<Karma?>
 }
 
 extension Database {
@@ -37,6 +38,12 @@ final class SQLiteKarmaRepository: KarmaRepository {
 				return karma.update(on: conn)
 			}
 		}
+    }
+
+    func find(id: String) -> Future<Karma?> {
+        return db.withConnection { conn in
+            return Karma.find(id, on: conn)
+        }
     }
 }
 

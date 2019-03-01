@@ -33,6 +33,17 @@ final class KarmaController {
             return self.karmaRepository.save(karma: karma)
         }
     }
+
+    func find(_ req: Request) throws -> Future<Karma> {
+        let id = try req.parameters.next(String.self)
+        return self.karmaRepository.find(id: id).map { almostKarma in
+            if let karma = almostKarma {
+                return karma
+            }
+
+            throw Abort(.notFound)
+        }
+    }
 }
 
 extension KarmaController: RouteCollection {
@@ -40,6 +51,7 @@ extension KarmaController: RouteCollection {
         router.get("karma", use: all)
         router.post("karma", use: create)
         router.put("karma", use: update)
+        router.get("karma", String.parameter, use: find)
     }
 }
 
@@ -57,8 +69,6 @@ extension KarmaController: SlackHandler {
     var eventTypes: [EventType] { return [.message] }
 
     func handleEvent(event: Event, slack: SlackMessageSender) {
-        print("handleEvent in KarmaController")
-
         guard let message = event.text else {
             return
         }
@@ -67,14 +77,24 @@ extension KarmaController: SlackHandler {
             return
         }
 
-        let karmaRequest = self.karmaRepository.save(karma: karmaMessage.karmaData())
-        karmaRequest.addAwaiter { result in
-            guard let _ = result.result,
-                result.error == nil else {
-                    return
+        let karmaRequest = self.karmaRepository.find(id: karmaMessage.user).flatMap { almostKarma in
+            if let karma = almostKarma {
+                let updatedKarma = Karma(id: karma.id, karma: karma.karma + karmaMessage.karma)
+                return self.karmaRepository.save(karma: updatedKarma)
             }
 
-            try! slack.sendMessage(text: karmaMessage.slackUser(), channelId: event.channel!.id!, attachments: [karmaMessage.slackAttachment()])
+            throw Abort(.notFound)
+        }.catchFlatMap { error in
+            return self.karmaRepository.save(karma: karmaMessage.karmaData())
+        }
+
+        karmaRequest.addAwaiter { result in
+            guard let karma = result.result, result.error == nil else {
+                return
+            }
+
+            let attachment = karmaMessage.slackAttachment(with: karma.karma)
+            try! slack.sendMessage(text: karmaMessage.slackUser(), channelId: event.channel!.id!, attachments: [attachment])
         }
     }
 }
