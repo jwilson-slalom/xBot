@@ -13,10 +13,19 @@ protocol SlackHandler {
     var eventTypes: [EventType] { get }
 }
 
-final class SlackKitService {
+final class SlackKitService: SlackMessageSender {
+
+    func _sendMessage(text: String, channelId: String, attachments: [Attachment]?) throws {
+        guard let connection = self.bot.clients.first?.value else {
+            print("No connection")
+            return
+        }
+        try SlackResponseMessageSender(clientConnection: connection).sendMessage(text: text, channelId: channelId, attachments: attachments)
+    }
+
     private let bot: SlackKit
     private let apiKeyStorage: APIKeyStorage
-    private var handlers = [SlackHandler]()
+    public var handlers = [SlackHandler]()
 
     init(_ apiKeyStorage: APIKeyStorage,
          // We're capturing the container here, but a more flexible architure
@@ -25,9 +34,6 @@ final class SlackKitService {
 
         self.bot = SlackKit()
         self.apiKeyStorage = apiKeyStorage
-
-        handlers.append(try container.make(OnTapController.self))
-        handlers.append(try container.make(KarmaController.self))
     }
 
     public func registerRTMConnection() {
@@ -57,11 +63,34 @@ final class SlackKitService {
         }
         handlers
             .filter { $0.eventTypes.contains(type) }
-            .forEach { $0.handleEvent(event: event, slack: SlackMessageSender(clientConnection: connection)) }
+            .forEach { $0.handleEvent(event: event, slack: SlackResponseMessageSender(clientConnection: connection)) }
     }
 }
 
-public struct SlackMessageSender {
+class GenericMessageSender: SlackMessageSender {
+    typealias SlackMessage = (String, String, [Attachment]?) throws -> Void
+    let function: SlackMessage
+    init(_ function: @escaping SlackMessage) {
+        self.function = function
+    }
+
+    public func _sendMessage(text: String, channelId: String, attachments: [Attachment]? = nil) throws {
+        try function(text, channelId, attachments)
+    }
+}
+
+protocol SlackMessageSender {
+    func _sendMessage(text: String, channelId: String, attachments: [Attachment]?) throws
+}
+
+extension SlackMessageSender {
+
+    public func sendMessage(text: String, channelId: String, attachments: [Attachment]? = nil) throws {
+        try _sendMessage(text: text, channelId: channelId, attachments: attachments)
+    }
+}
+
+public struct SlackResponseMessageSender: SlackMessageSender {
 
     private let clientConnection: ClientConnection
 
@@ -69,7 +98,7 @@ public struct SlackMessageSender {
         self.clientConnection = clientConnection
     }
 
-    public func sendMessage(text: String, channelId: String, attachments: [Attachment]? = nil) throws {
+    public func _sendMessage(text: String, channelId: String, attachments: [Attachment]? = nil) throws {
         guard let web = clientConnection.webAPI else { throw Abort(.internalServerError) }
 
         web.sendMessage(channel: channelId, text: text, attachments: attachments, success: { (ts, channel) in

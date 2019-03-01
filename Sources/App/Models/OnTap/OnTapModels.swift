@@ -25,8 +25,10 @@ enum Tap: String, Fluent.ID, Parameter {
 struct Beer: Content, SQLiteStringModel, Migration {
 
     var id: String?
+    var untappdID: Double
     var name: String
     var breweryName: String
+    var untappdURL: URL
 }
 
 extension Beer: RequestDecodable {
