@@ -9,7 +9,6 @@ import Foundation
 import FluentSQLite
 import Vapor
 
-
 /// Associate a karma (rating) with a unique entity
 final class Karma: SQLiteStringModel {
     var id: String?

@@ -6,10 +6,27 @@
 //
 
 import Foundation
+import FluentSQLite
 import Vapor
 
-struct Beer: Codable {
-    let name = "A Beers Name"
+enum Tap: String, Fluent.ID, Parameter {
+    static func resolveParameter(_ parameter: String, on container: Container) throws -> Tap {
+        if let decoded = Tap(rawValue: parameter) {
+            return decoded
+        }
+        throw Abort(.internalServerError)
+    }
+
+    typealias ResolvedParameter = Tap
+
+    case left, right
+}
+
+struct Beer: Content, SQLiteStringModel, Migration {
+
+    var id: String?
+    var name: String
+    var breweryName: String
 }
 
 extension Beer: RequestDecodable {
