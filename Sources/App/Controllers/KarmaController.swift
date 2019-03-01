@@ -20,8 +20,10 @@ final class KarmaController {
         return karmaRepository.all()
     }
 
-    func command(_ req: Request, content: Command) throws -> Future<Response> {
-        return try Leaderboard(text: "leaderboard").encode(for: req)
+    func command(_ req: Request) throws -> Future<Response> {
+        return try req.content.decode(Command.self).flatMap {  command in
+            return try Leaderboard(text: "leaderboard").encode(for: req)
+        }
     }
 
     /// Saves a decoded `Karma` to the database.
@@ -56,7 +58,8 @@ extension KarmaController: RouteCollection {
         router.post("karma", use: create)
         router.put("karma", use: update)
         router.get("karma", String.parameter, use: find)
-        router.post(Command.self, at: "command", use: command)
+//        router.post(Command.self, at: "command", use: command)
+        router.post("command", use: command)
     }
 }
 

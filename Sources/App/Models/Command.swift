@@ -10,8 +10,8 @@ import Vapor
 
 struct Command: Content {
 
-    let command: String
-    let response_url: URL?
+    let command: String?
+    let response_url: String?
     let trigger_id: String?
     let text: String?
     
