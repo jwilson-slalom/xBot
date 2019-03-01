@@ -63,30 +63,19 @@ extension KarmaController: SlackHandler {
             return
         }
 
-        let groups = karmaParser.captureGroupsFrom(message: message)
-
-        guard let karma = convertGroupsToKarma(groups: groups) else {
+        guard let karmaMessage = karmaParser.karmaMessageFrom(message: message) else {
             return
         }
 
-        let karmaRequest = self.karmaRepository.save(karma: karma)
+        let karmaRequest = self.karmaRepository.save(karma: karmaMessage.karmaData())
         karmaRequest.addAwaiter { result in
             guard let karma = result.result,
-                        result.error == nil,
-                        let karmaTitle = karma.id else {
+                        result.error == nil else {
 
                 return
             }
             
-            try! slack.sendMessage(text: "\(karmaTitle) has \(karma.karma) karma!", channelId: event.channel!.id!)
+            try! slack.sendMessage(text: "\(karmaMessage.slackUser()) has \(karma.karma) karma!", channelId: event.channel!.id!)
         }
-    }
-
-    private func convertGroupsToKarma(groups: [String]) -> Karma? {
-        guard groups.count == 2 else {
-            return nil
-        }
-
-        return Karma(id: groups[0], karma: groups[1].count - 1)
     }
 }
