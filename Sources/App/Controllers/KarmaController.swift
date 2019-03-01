@@ -71,11 +71,19 @@ extension KarmaController: SlackHandler {
     var eventTypes: [EventType] { return [.message] }
 
     func handleEvent(event: Event, slack: SlackMessageSender) {
-        guard let message = event.text else {
+        guard let message = event.text,
+              let sendingUser = event.user?.id else {
+
             return
         }
 
         guard let karmaMessage = karmaParser.karmaMessageFrom(message: message) else {
+            return
+        }
+
+        guard karmaMessage.user != sendingUser else {
+            // TODO: Send error message back to offending user 
+            print("You can't adjust karma for yourself! Try spreading the wealth 😎")
             return
         }
 
