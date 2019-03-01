@@ -5,7 +5,7 @@
 //  Created by Jacob Wilson on 2/28/19.
 //
 
-import Foundation
+import Vapor
 
 final class KarmaParser {
     private let posRegex = "^([A-Za-z0-9\\s_@#<>|]*)\\s?(\\+{1,4}\\+)"
@@ -19,6 +19,12 @@ final class KarmaParser {
         }
 
         return match.captureGroups(testedString: message)
+    }
+}
+
+extension KarmaParser: ServiceType {
+    static func makeService(for container: Container) throws -> KarmaParser {
+        return KarmaParser()
     }
 }
 
