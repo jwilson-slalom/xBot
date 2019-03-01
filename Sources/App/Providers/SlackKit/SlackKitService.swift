@@ -43,6 +43,7 @@ final class SlackKitService {
         for type in eventTypes {
             bot.notificationForEvent(type) { (event, connection) in
                 guard let connection = connection else { return }
+                guard event.message?.botID == nil else { return }
 
                 self.handleEvent(event, onConnection: connection)
             }
