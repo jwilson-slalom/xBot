@@ -41,38 +41,45 @@ extension KarmaMessage {
     }
 
     private func emojiRelation(total: Int) -> String {
+        let lessThanZero = total < 0
+        if total < 0 {
+            switch lessThanZero {
+            case (-10 ..< 0).contains(total):
+                return "👎"
+            case (-25 ..< -10).contains(total):
+                return "🙊"
+            case (-50 ..< -25).contains(total):
+                return "🥦"
+            case (-100 ..< -50).contains(total):
+                return "💩"
+            case (-200 ..< -100).contains(total):
+                return "🤮"
+            case (-300 ..< -200).contains(total):
+                return "🙈"
+            case (-400 ..< -300).contains(total):
+                return "☠️"
+            case (Int.min ..< 400).contains(total):
+                return "😈"
+            default:
+                return ""
+            }
+        }
         switch total {
-        case -10 ... -1:
-            return "👎"
-        case -25 ... -11:
-            return "🙊"
-        case -50 ... -26:
-            return "🥦"
-        case -100 ... -51:
-            return "💩"
-        case -200 ... -101:
-            return "🤮"
-        case -300 ... -201:
-            return "🙈"
-        case -400 ... -301:
-            return "☠️"
-        case -401 ... -500:
-            return "😈"
-        case 0...10:
+        case 0..<10:
             return "👍"
-        case 11...25:
+        case 10..<25:
             return "🤙"
-        case 26...50:
+        case 25..<50:
             return "✅"
-        case 51...100:
+        case 50..<100:
             return "🌟"
-        case 101...200:
+        case 100..<200:
             return "💯"
-        case 201...300:
+        case 200..<300:
             return "❤️"
-        case 301...400:
+        case 300..<400:
             return "😎"
-        case 401...500:
+        case 400..<500:
             return "🔥"
         default:
             return""
