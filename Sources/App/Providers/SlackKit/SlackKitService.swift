@@ -8,63 +8,83 @@
 import Vapor
 import SlackKit
 
+protocol SlackHandler {
+    func handleEvent(event: Event, slack: SlackMessageSender)
+    var eventTypes: [EventType] { get }
+}
+
 final class SlackKitService {
     private let bot: SlackKit
     private let apiKeyStorage: APIKeyStorage
-    private let todoRepository: TodoRepository
+    private var handlers = [SlackHandler]()
 
     init(_ apiKeyStorage: APIKeyStorage,
-         todoRepository: TodoRepository) {
+         // We're capturing the container here, but a more flexible architure
+         // would follow the routing patterns used by the the vapor HTTP service
+         container: Container) throws {
 
         self.bot = SlackKit()
         self.apiKeyStorage = apiKeyStorage
-        self.todoRepository = todoRepository
+
+        handlers.append(try container.make(OnTapController.self))
+        handlers.append(try container.make(KarmaController.self))
     }
 
     public func registerRTMConnection() {
-        bot.addRTMBotWithAPIToken(apiKeyStorage.botUserApiKey)
+        bot.addRTMBotWithAPIToken(apiKeyStorage.botUserApiKey, rtm: VaporEngineRTM())
+        bot.addWebAPIAccessWithToken(apiKeyStorage.botUserApiKey)
 
-        bot.notificationForEvent(.message) { event, clientConnection in
-            guard let connection = clientConnection else {
-                print("Bad ClientConnection")
-                return
-            }
+        let eventTypes: [EventType] =
+        [
+            .message,
+            .channelJoined
+        ]
 
-            guard let channelId = event.channel?.id, event.message?.botID == nil else {
-                print("Bad Channel Id")
-                return
-            }
+        for type in eventTypes {
+            bot.notificationForEvent(type) { (event, connection) in
+                guard let connection = connection else { return }
+                guard event.message?.botID == nil else { return }
 
-            let todo = Todo(title: "Created from Slack")
-
-            let todoRequest = self.todoRepository.save(user: todo)
-            todoRequest.addAwaiter { request in
-                guard let _ = request.result, request.error == nil else {
-                    print("Could not handle todo request")
-                    return
-                }
-
-                do {
-                    try self.sendMessage(using: connection, text: "Created Todo", channelId: channelId)
-                } catch {
-                    print("Error Sending Message: \(error)")
-                }
+                self.handleEvent(event, onConnection: connection)
             }
         }
     }
 
-    private func sendMessage(using clientConnection: ClientConnection, text: String, channelId: String) throws {
-        guard let rtm = clientConnection.rtm else { throw Abort(.internalServerError) }
+    private func handleEvent(_ event: Event, onConnection connection: ClientConnection) {
+        guard let type = event.type else {
+            print("Unhandled event type")
+            return
+        }
+        handlers
+            .filter { $0.eventTypes.contains(type) }
+            .forEach { $0.handleEvent(event: event, slack: SlackMessageSender(clientConnection: connection)) }
+    }
+}
 
-        try rtm.sendMessage(text, channelID: channelId)
+public struct SlackMessageSender {
+
+    private let clientConnection: ClientConnection
+
+    init(clientConnection: ClientConnection) {
+        self.clientConnection = clientConnection
+    }
+
+    public func sendMessage(text: String, channelId: String, attachments: [Attachment]? = nil) throws {
+        guard let web = clientConnection.webAPI else { throw Abort(.internalServerError) }
+
+        web.sendMessage(channel: channelId, text: text, attachments: attachments, success: { (ts, channel) in
+
+        }, failure: { Error in
+            
+        })
     }
 }
 
 extension SlackKitService: ServiceType {
+
     static public func makeService(for container: Container) throws -> SlackKitService {
         let apiKeyStorage = try container.make(APIKeyStorage.self)
-        let todoRepository = try container.make(TodoRepository.self)
 
-        return .init(apiKeyStorage, todoRepository: todoRepository)
+        return try .init(apiKeyStorage, container: container)
     }
 }
