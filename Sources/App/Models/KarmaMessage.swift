@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SlackKit
 
 struct KarmaMessage {
     let user: String
@@ -13,6 +14,26 @@ struct KarmaMessage {
 }
 
 extension KarmaMessage {
+
+    private func messageColor() -> String {
+        return karma >= 0 ? "#36a64f" : "#E8B122"
+    }
+
+    private func changed() -> String {
+        return karma >= 0 ? "increased" : "decreased"
+    }
+
+    func defaultMessage() -> String {
+        return "\(user)’s karma \(changed()) by \(karma)"
+    }
+
+    func slackAttachment() -> Attachment {
+//        let user = slackUser()
+        return Attachment(attachment: ["fallback": defaultMessage(),
+            "color": messageColor(),
+//            "pretext": user,
+            "text": "Karma \(changed()) by \(abs(karma))"])
+    }
 
     func slackUser() -> String {
         return "<@\(user)>"

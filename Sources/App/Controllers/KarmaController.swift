@@ -69,13 +69,12 @@ extension KarmaController: SlackHandler {
 
         let karmaRequest = self.karmaRepository.save(karma: karmaMessage.karmaData())
         karmaRequest.addAwaiter { result in
-            guard let karma = result.result,
-                        result.error == nil else {
-
-                return
+            guard let _ = result.result,
+                result.error == nil else {
+                    return
             }
-            
-            try! slack.sendMessage(text: "\(karmaMessage.slackUser()) has \(karma.karma) karma!", channelId: event.channel!.id!)
+
+            try! slack.sendMessage(text: karmaMessage.slackUser(), channelId: event.channel!.id!, attachments: [karmaMessage.slackAttachment()])
         }
     }
 }
