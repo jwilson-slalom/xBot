@@ -15,6 +15,7 @@ public struct SlackKitProvider: Provider {
     public func didBoot(_ container: Container) throws -> EventLoopFuture<Void> {
         let service = try container.make(SlackKitService.self)
         service.registerRTMConnection()
+
         return .done(on: container)
     }
 }

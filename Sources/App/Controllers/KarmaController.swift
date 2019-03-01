@@ -77,9 +77,10 @@ extension KarmaController: SlackHandler {
             return
         }
 
-        let karmaRequest = self.karmaRepository.find(id: karmaMessage.user).map { almostKarma in
+        let karmaRequest = self.karmaRepository.find(id: karmaMessage.user).flatMap { almostKarma in
             if let karma = almostKarma {
-                return karma
+                let updatedKarma = Karma(id: karma.id, karma: karma.karma + karmaMessage.karma)
+                return self.karmaRepository.save(karma: updatedKarma)
             }
 
             throw Abort(.notFound)
@@ -91,8 +92,9 @@ extension KarmaController: SlackHandler {
             guard let karma = result.result, result.error == nil else {
                 return
             }
-            
-            try! slack.sendMessage(text: "\(karmaMessage.slackUser()) has \(karma.karma) karma!", channelId: event.channel!.id!)
+
+            let attachment = karmaMessage.slackAttachment(with: karma.karma)
+            try! slack.sendMessage(text: karmaMessage.slackUser(), channelId: event.channel!.id!, attachments: [attachment])
         }
     }
 }
