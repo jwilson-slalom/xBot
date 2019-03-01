@@ -19,12 +19,12 @@ extension KarmaMessage {
         return karma >= 0 ? "#36a64f" : "#E8B122"
     }
 
-    private func crease() -> String {
+    private func changed() -> String {
         return karma >= 0 ? "increased" : "decreased"
     }
 
     func defaultMessage() -> String {
-        return "\(user)’s karma \(crease()) by \(karma)"
+        return "\(user)’s karma \(changed()) by \(karma)"
     }
 
     func slackAttachment() -> Attachment {
@@ -32,7 +32,7 @@ extension KarmaMessage {
         return Attachment(attachment: ["fallback": defaultMessage(),
             "color": messageColor(),
 //            "pretext": user,
-            "text": "Karma \(crease()) by \(abs(karma))"])
+            "text": "Karma \(changed()) by \(abs(karma))"])
     }
 
     func slackUser() -> String {
