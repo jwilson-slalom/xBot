@@ -23,8 +23,8 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     services.register(SQLiteOnTapRepository.self)
 
     // Configure a SQLite database
-    let sqlite = try SQLiteDatabase(storage: .memory)
-    let ontapDatabase = try SQLiteDatabase(storage: .memory)
+    let sqlite = try SQLiteDatabase(storage: .file(path: "karmaDB"))
+    let ontapDatabase = try SQLiteDatabase(storage: .file(path: "onTapDB"))
 
     // Register the configured SQLite database to the database config.
     var databases = DatabasesConfig()
