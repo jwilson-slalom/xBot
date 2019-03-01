@@ -18,4 +18,7 @@ extension KarmaMessage {
         return "<@\(user)>"
     }
 
+    func karmaData() -> Karma {
+        return Karma(id: user, karma: karma)
+    }
 }

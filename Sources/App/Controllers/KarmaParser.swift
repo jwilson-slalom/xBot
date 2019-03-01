@@ -5,7 +5,7 @@
 //  Created by Jacob Wilson on 2/28/19.
 //
 
-import Foundation
+import Vapor
 
 final class KarmaParser {
     private let posRegex = "^(<@([\\w].+?)>)[\\s]*(\\+{1,5}\\+)"
@@ -19,7 +19,7 @@ final class KarmaParser {
         negativeRegex = try! NSRegularExpression(pattern: negRegex)
     }
 
-    func captureGroupsFrom(message: String) -> [KarmaMessage] {
+    func karmaMessageFrom(message: String) -> KarmaMessage? {
         if let match = findMatch(regex: positiveRegex, message: message) {
             return match
         }
@@ -28,17 +28,17 @@ final class KarmaParser {
             return match
         }
 
-        return []
+        return nil
     }
 
-    func findMatch(regex: NSRegularExpression, message: String) -> [KarmaMessage]? {
+    private func findMatch(regex: NSRegularExpression, message: String) -> KarmaMessage? {
         if let match = regex.firstMatch(in: message, range: NSRange(location: 0, length: message.count)) {
-            return [createMessage(match: match, message: message)]
+            return createMessage(match: match, message: message)
         }
-        return []
+        return nil
     }
 
-    func createMessage(match: NSTextCheckingResult, message: String) -> KarmaMessage {
+    private func createMessage(match: NSTextCheckingResult, message: String) -> KarmaMessage {
         let parts = match.captureGroups(testedString: message)
         let karma: Int
         if parts[2].contains("+") {
@@ -47,6 +47,12 @@ final class KarmaParser {
             karma = (parts[2].count - 1) * -1
         }
         return KarmaMessage(user: parts[1], karma: karma)
+    }
+}
+
+extension KarmaParser: ServiceType {
+    static func makeService(for container: Container) throws -> KarmaParser {
+        return KarmaParser()
     }
 }
 

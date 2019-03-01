@@ -27,6 +27,7 @@ final class SlackKitService {
         self.apiKeyStorage = apiKeyStorage
 
         handlers.append(try container.make(OnTapController.self))
+        handlers.append(try container.make(KarmaController.self))
     }
 
     public func registerRTMConnection() {

@@ -1,12 +1,18 @@
 import Vapor
+import class SlackKit.Event
+import enum SlackKit.EventType
 
-/// Controls basic CRUD operations on `Todo`s.
+/// Controls basic CRUD operations on `Karma`s.
 final class KarmaController {
 
     private let karmaRepository: KarmaRepository
+    private let karmaParser: KarmaParser
 
-    init(todoRepository: KarmaRepository) {
-        self.karmaRepository = todoRepository
+    init(karmaRepository: KarmaRepository,
+         karmaParser: KarmaParser) {
+
+        self.karmaRepository = karmaRepository
+        self.karmaParser = karmaParser
     }
 
     /// Returns a list of all `Todo`s.
@@ -39,7 +45,37 @@ extension KarmaController: RouteCollection {
 
 extension KarmaController: ServiceType {
     static func makeService(for container: Container) throws -> KarmaController {
-        let todoRepository = try container.make(KarmaRepository.self)
-        return KarmaController(todoRepository: todoRepository)
+        let karmaRepository = try container.make(KarmaRepository.self)
+        let karmaParser = try container.make(KarmaParser.self)
+
+        return KarmaController(karmaRepository: karmaRepository, karmaParser: karmaParser)
+    }
+}
+
+extension KarmaController: SlackHandler {
+
+    var eventTypes: [EventType] { return [.message] }
+
+    func handleEvent(event: Event, slack: SlackMessageSender) {
+        print("handleEvent in KarmaController")
+
+        guard let message = event.text else {
+            return
+        }
+
+        guard let karmaMessage = karmaParser.karmaMessageFrom(message: message) else {
+            return
+        }
+
+        let karmaRequest = self.karmaRepository.save(karma: karmaMessage.karmaData())
+        karmaRequest.addAwaiter { result in
+            guard let karma = result.result,
+                        result.error == nil else {
+
+                return
+            }
+            
+            try! slack.sendMessage(text: "\(karmaMessage.slackUser()) has \(karma.karma) karma!", channelId: event.channel!.id!)
+        }
     }
 }
