@@ -71,7 +71,10 @@ extension KarmaController: SlackHandler {
     var eventTypes: [EventType] { return [.message] }
 
     func handleEvent(event: Event, slack: SlackMessageSender) {
-        guard let message = event.text else {
+        guard let message = event.text,
+              let channelId = event.channel?.id,
+              let sendingUser = event.user?.id else {
+                
             return
         }
 
@@ -92,11 +95,13 @@ extension KarmaController: SlackHandler {
 
         karmaRequest.addAwaiter { result in
             guard let karma = result.result, result.error == nil else {
+                let errorMessage = "Something went wrong. Please try again"
+                try! slack.sendErrorMessage(text: errorMessage, channelId: channelId, user: sendingUser)
                 return
             }
 
             let attachment = karmaMessage.slackAttachment(with: karma.karma)
-            try! slack.sendMessage(text: karmaMessage.slackUser(), channelId: event.channel!.id!, attachments: [attachment])
+            try! slack.sendMessage(text: karmaMessage.slackUser(), channelId: channelId, attachments: [attachment])
         }
     }
 }
