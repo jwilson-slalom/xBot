@@ -28,7 +28,7 @@ extension KarmaMessage {
         {
             "attachments": [
                 {
-                    "fallback": "\(user)’s karma increased by \(karma)",
+                    "fallback": "\(user)’s karma \(crease()) by \(karma)",
                     "color": "\(messageColor())",
                     "pretext": "\(user)",
                     "text": "\(user)’s karma \(crease()) by \(karma)"
