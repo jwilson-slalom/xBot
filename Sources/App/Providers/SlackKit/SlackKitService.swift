@@ -15,14 +15,6 @@ protocol SlackHandler {
 
 final class SlackKitService: SlackMessageSender {
 
-    func _sendMessage(text: String, channelId: String, attachments: [Attachment]?) throws {
-        guard let connection = self.bot.clients.first?.value else {
-            print("No connection")
-            return
-        }
-        try SlackResponseMessageSender(clientConnection: connection).sendMessage(text: text, channelId: channelId, attachments: attachments)
-    }
-
     private let bot: SlackKit
     private let apiKeyStorage: APIKeyStorage
     public var handlers = [SlackHandler]()
@@ -56,6 +48,22 @@ final class SlackKitService: SlackMessageSender {
         }
     }
 
+    func sendMessage(text: String, channelId: String, attachments: [Attachment]?) throws {
+        guard let connection = self.bot.clients.first?.value else {
+            print("No connection")
+            return
+        }
+        try SlackResponseMessageSender(clientConnection: connection).sendMessage(text: text, channelId: channelId, attachments: attachments)
+    }
+
+    func sendErrorMessage(text: String, channelId: String, user: String) throws {
+        guard let connection = self.bot.clients.first?.value else {
+            print("No connection")
+            return
+        }
+        try SlackResponseMessageSender(clientConnection: connection).sendErrorMessage(text: text, channelId: channelId, user: user)
+    }
+
     private func handleEvent(_ event: Event, onConnection connection: ClientConnection) {
         guard let type = event.type else {
             print("Unhandled event type")
@@ -69,25 +77,28 @@ final class SlackKitService: SlackMessageSender {
 
 class GenericMessageSender: SlackMessageSender {
     typealias SlackMessage = (String, String, [Attachment]?) throws -> Void
-    let function: SlackMessage
-    init(_ function: @escaping SlackMessage) {
-        self.function = function
+    typealias SlackErrorMessage = (String, String, String) throws -> Void
+
+    private let messageFunction: SlackMessage
+    private let errorMessageFunction: SlackErrorMessage
+
+    init(_ message: @escaping SlackMessage, error: @escaping SlackErrorMessage) {
+        self.messageFunction = message
+        self.errorMessageFunction = error
     }
 
-    public func _sendMessage(text: String, channelId: String, attachments: [Attachment]? = nil) throws {
-        try function(text, channelId, attachments)
+    public func sendMessage(text: String, channelId: String, attachments: [Attachment]? = nil) throws {
+        try messageFunction(text, channelId, attachments)
+    }
+
+    func sendErrorMessage(text: String, channelId: String, user: String) throws {
+        try errorMessageFunction(text, channelId, user)
     }
 }
 
 protocol SlackMessageSender {
-    func _sendMessage(text: String, channelId: String, attachments: [Attachment]?) throws
-}
-
-extension SlackMessageSender {
-
-    public func sendMessage(text: String, channelId: String, attachments: [Attachment]? = nil) throws {
-        try _sendMessage(text: text, channelId: channelId, attachments: attachments)
-    }
+    func sendMessage(text: String, channelId: String, attachments: [Attachment]?) throws
+    func sendErrorMessage(text: String, channelId: String, user: String) throws
 }
 
 public struct SlackResponseMessageSender: SlackMessageSender {
@@ -98,13 +109,23 @@ public struct SlackResponseMessageSender: SlackMessageSender {
         self.clientConnection = clientConnection
     }
 
-    public func _sendMessage(text: String, channelId: String, attachments: [Attachment]? = nil) throws {
+    func sendMessage(text: String, channelId: String, attachments: [Attachment]? = nil) throws {
         guard let web = clientConnection.webAPI else { throw Abort(.internalServerError) }
 
         web.sendMessage(channel: channelId, text: text, attachments: attachments, success: { (ts, channel) in
 
         }, failure: { Error in
             
+        })
+    }
+
+    func sendErrorMessage(text: String, channelId: String, user: String) throws {
+        guard let web = clientConnection.webAPI else { throw Abort(.internalServerError) }
+
+        web.sendEphemeral(channel: channelId, text: text, user: user, success: { (ts, channel) in
+
+        }, failure: { Error in
+
         })
     }
 }
