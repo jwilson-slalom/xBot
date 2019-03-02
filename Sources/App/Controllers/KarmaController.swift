@@ -98,15 +98,13 @@ extension KarmaController: SlackResponder {
         }
 
         let slack = self.slack
-        karmaRequest.addAwaiter { result in
-            guard let karma = result.result, result.error == nil else {
+        karmaRequest
+            .do { karma in
+                let attachment = karmaMessage.slackAttachment(with: karma.karma)
+                try! slack.sendMessage(text: karmaMessage.slackUser(), channelId: channelId, attachments: [attachment])
+            }.catch { error in
                 let errorMessage = "Something went wrong. Please try again"
                 try! slack.sendErrorMessage(text: errorMessage, channelId: channelId, user: sendingUser)
-                return
             }
-
-            let attachment = karmaMessage.slackAttachment(with: karma.karma)
-            try! slack.sendMessage(text: karmaMessage.slackUser(), channelId: channelId, attachments: [attachment])
-        }
     }
 }
