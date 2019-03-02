@@ -5,16 +5,15 @@ import enum SlackKit.EventType
 /// Controls basic CRUD operations on `Karma`s.
 final class KarmaController {
 
-    var genericMessageSender: SlackMessageSender?
-
     private let karmaRepository: KarmaRepository
-    private let karmaParser: KarmaParser
+    private let karmaParser = KarmaParser()
+    private let slack: Slack
 
     init(karmaRepository: KarmaRepository,
-         karmaParser: KarmaParser) {
+         slack: Slack) {
 
         self.karmaRepository = karmaRepository
-        self.karmaParser = karmaParser
+        self.slack = slack
     }
 
     /// Returns a list of all `Todo`s.
@@ -54,19 +53,23 @@ extension KarmaController: RouteCollection {
 }
 
 extension KarmaController: ServiceType {
-    static func makeService(for container: Container) throws -> KarmaController {
-        let karmaRepository = try container.make(KarmaRepository.self)
-        let karmaParser = try container.make(KarmaParser.self)
 
-        return KarmaController(karmaRepository: karmaRepository, karmaParser: karmaParser)
+    static func makeService(for container: Container) throws -> KarmaController {
+        let slack = try container.make(Slack.self)
+        let karmaController = KarmaController(karmaRepository: try container.make(KarmaRepository.self),
+                                              slack: slack)
+
+        slack.register(responder: karmaController, on: container)
+
+        return karmaController
     }
 }
 
-extension KarmaController: SlackHandler {
+extension KarmaController: SlackResponder {
 
     var eventTypes: [EventType] { return [.message] }
 
-    func handleEvent(event: Event, slack: SlackMessageSender) {
+    func handleEvent(event: Event) {
         guard let message = event.text,
               let channelId = event.channel?.id,
               let sendingUser = event.user?.id else {
@@ -94,6 +97,7 @@ extension KarmaController: SlackHandler {
             return self.karmaRepository.save(karma: karmaMessage.karmaData())
         }
 
+        let slack = self.slack
         karmaRequest.addAwaiter { result in
             guard let karma = result.result, result.error == nil else {
                 let errorMessage = "Something went wrong. Please try again"
