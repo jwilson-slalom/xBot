@@ -70,11 +70,16 @@ extension KarmaController: SlackHandler {
         guard let message = event.text,
               let channelId = event.channel?.id,
               let sendingUser = event.user?.id else {
-                
             return
         }
 
         guard let karmaMessage = karmaParser.karmaMessageFrom(message: message) else {
+            return
+        }
+
+        guard karmaMessage.user != sendingUser else {
+            // TODO: Send error message back to offending user 
+            print("You can't adjust karma for yourself! Try spreading the wealth 😎")
             return
         }
 
