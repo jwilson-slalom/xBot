@@ -23,22 +23,25 @@ final class KarmaParser {
     }
 
     func karmaMessages(from message: String) -> [KarmaMessage] {
-        if let match = findKarmaMatch(using: positiveRegex, on: message) {
-            return match
+        let positiveMessageMatch = findKarmaMatch(using: positiveRegex, on: message)
+        if !positiveMessageMatch.isEmpty {
+            return positiveMessageMatch
         }
 
-        if let match = findKarmaMatch(using: negativeRegex, on: message) {
-            return match
+        let negativeMessageMatch = findKarmaMatch(using: negativeRegex, on: message)
+        if !negativeMessageMatch.isEmpty {
+            return negativeMessageMatch
         }
 
         return []
     }
 
-    private func findKarmaMatch(using regex: NSRegularExpression, on message: String) -> [KarmaMessage]? {
+    private func findKarmaMatch(using regex: NSRegularExpression, on message: String) -> [KarmaMessage] {
         if let match = regex.firstMatch(in: message, range: NSRange(location: 0, length: message.count)) {
             return process(match: match, on: message)
         }
-        return nil
+
+        return []
     }
 
     private func process(match: NSTextCheckingResult, on message: String) -> [KarmaMessage] {
