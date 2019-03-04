@@ -53,7 +53,6 @@ extension KarmaController: RouteCollection {
 }
 
 extension KarmaController: ServiceType {
-
     static func makeService(for container: Container) throws -> KarmaController {
         let slack = try container.make(Slack.self)
         let karmaController = KarmaController(karmaRepository: try container.make(KarmaRepository.self),
