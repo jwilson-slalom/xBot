@@ -7,7 +7,7 @@
 
 import Vapor
 
-struct APIKeyStorage {
+struct APIKeyStorage: Equatable {
     let botUserApiKey: String
 }
 
@@ -23,8 +23,6 @@ extension Environment {
 
 extension APIKeyStorage: ServiceType {
     static let secretsFilename = "secrets.json"
-
-
 
     static func makeService(for container: Container) throws -> APIKeyStorage {
         let workingDirectoryPath = try container.make(DirectoryConfig.self).workDir

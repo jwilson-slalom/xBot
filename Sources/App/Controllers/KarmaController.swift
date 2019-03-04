@@ -5,16 +5,15 @@ import enum SlackKit.EventType
 /// Controls basic CRUD operations on `Karma`s.
 final class KarmaController {
 
-    var genericMessageSender: SlackMessageSender?
-
     private let karmaRepository: KarmaRepository
-    private let karmaParser: KarmaParser
+    private let karmaParser = KarmaParser()
+    private let slack: Slack
 
     init(karmaRepository: KarmaRepository,
-         karmaParser: KarmaParser) {
+         slack: Slack) {
 
         self.karmaRepository = karmaRepository
-        self.karmaParser = karmaParser
+        self.slack = slack
     }
 
     /// Returns a list of all `Todo`s.
@@ -29,17 +28,13 @@ final class KarmaController {
     }
 
     /// Saves a decoded `Karma` to the database.
-    func create(_ req: Request) throws -> Future<Karma> {
-        return try req.content.decode(Karma.self).flatMap { karma in
-            return self.karmaRepository.save(karma: karma)
-        }
+    func create(_ req: Request, content: Karma) throws -> Future<Karma> {
+        return self.karmaRepository.save(karma: content)
     }
 
     /// Saves a decoded `Karma` to the database.
-    func update(_ req: Request) throws -> Future<Karma> {
-        return try req.content.decode(Karma.self).flatMap { karma in
-            return self.karmaRepository.save(karma: karma)
-        }
+    func update(_ req: Request, content: Karma) throws -> Future<Karma> {
+        return self.karmaRepository.save(karma: content)
     }
 
     func find(_ req: Request) throws -> Future<Karma> {
@@ -57,8 +52,8 @@ final class KarmaController {
 extension KarmaController: RouteCollection {
     func boot(router: Router) throws {
         router.get("karma", use: all)
-        router.post("karma", use: create)
-        router.put("karma", use: update)
+        router.post(Karma.self, at:"karma", use: create)
+        router.put(Karma.self, at:"karma", use: update)
         router.get("karma", String.parameter, use: find)
 //        router.post(Command.self, at: "command", use: command)
         router.post("command", use: command)
@@ -66,24 +61,36 @@ extension KarmaController: RouteCollection {
 }
 
 extension KarmaController: ServiceType {
-    static func makeService(for container: Container) throws -> KarmaController {
-        let karmaRepository = try container.make(KarmaRepository.self)
-        let karmaParser = try container.make(KarmaParser.self)
 
-        return KarmaController(karmaRepository: karmaRepository, karmaParser: karmaParser)
+    static func makeService(for container: Container) throws -> KarmaController {
+        let slack = try container.make(Slack.self)
+        let karmaController = KarmaController(karmaRepository: try container.make(KarmaRepository.self),
+                                              slack: slack)
+
+        slack.register(responder: karmaController, on: container)
+
+        return karmaController
     }
 }
 
-extension KarmaController: SlackHandler {
+extension KarmaController: SlackResponder {
 
     var eventTypes: [EventType] { return [.message] }
 
-    func handleEvent(event: Event, slack: SlackMessageSender) {
-        guard let message = event.text else {
+    func handleEvent(event: Event) {
+        guard let message = event.text,
+              let channelId = event.channel?.id,
+              let sendingUser = event.user?.id else {
             return
         }
 
         guard let karmaMessage = karmaParser.karmaMessageFrom(message: message) else {
+            return
+        }
+
+        guard karmaMessage.user != sendingUser else {
+            // TODO: Send error message back to offending user 
+            print("You can't adjust karma for yourself! Try spreading the wealth 😎")
             return
         }
 
@@ -98,13 +105,14 @@ extension KarmaController: SlackHandler {
             return self.karmaRepository.save(karma: karmaMessage.karmaData())
         }
 
-        karmaRequest.addAwaiter { result in
-            guard let karma = result.result, result.error == nil else {
-                return
+        let slack = self.slack
+        karmaRequest
+            .do { karma in
+                let attachment = karmaMessage.slackAttachment(with: karma.karma)
+                try! slack.sendMessage(text: karmaMessage.slackUser(), channelId: channelId, attachments: [attachment])
+            }.catch { error in
+                let errorMessage = "Something went wrong. Please try again"
+                try! slack.sendErrorMessage(text: errorMessage, channelId: channelId, user: sendingUser)
             }
-
-            let attachment = karmaMessage.slackAttachment(with: karma.karma)
-            try! slack.sendMessage(text: karmaMessage.slackUser(), channelId: event.channel!.id!, attachments: [attachment])
-        }
     }
 }

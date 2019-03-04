@@ -112,16 +112,23 @@ func set(beer newBeer: Beer?, on tap: Tap) -> Bool {
     return false
 }
 
-final class OnTapController: RouteCollection, ServiceType {
-
-    let slackKitService: SlackKitService
-
-    init(slackKitService: SlackKitService) {
-        self.slackKitService = slackKitService
-    }
+extension OnTapController: ServiceType {
 
     static func makeService(for container: Container) throws -> OnTapController {
-        return OnTapController(slackKitService: App.slackKitService)
+        let slack = try container.make(Slack.self)
+        let onTap = OnTapController(slackClient: slack)
+        slack.register(responder: onTap, on: container)
+
+        return onTap
+    }
+}
+
+final class OnTapController: RouteCollection {
+
+    let slack: Slack
+
+    init(slackClient: Slack) {
+        self.slack = slackClient
     }
 
     func boot(router: Router) throws {
@@ -150,14 +157,13 @@ final class OnTapController: RouteCollection, ServiceType {
             if set(beer: content, on: tap) {
                 print("Tap \(tap) changed to: \(content)")
 
-                try slackKitService.sendMessage(
+                try slack.sendMessage(
                     text: "",
                     channelId: waterCoolerChannelID,
                     attachments: [OnTapMessage.newBeerAttachment(for: tap, with: content)]
                 )
             }
 
-            // TODO: Update slack if the beers changed
             return KegSystem(leftTap: leftBeer, rightTap: rightBeer).encode(status: .ok, for: request)
         } catch let error as RoutingError {
             return error.description.encode(status: .badRequest, for: request)
@@ -175,9 +181,10 @@ final class OnTapController: RouteCollection, ServiceType {
 
         do {
 
+            // TODO: Finish this, it's not supported by _onTap app either
             let tap = try request.parameters.next(Tap.self)
             if set(beer: nil, on: tap) {
-                print("Tap \(tap) changed to: \(Optional<Beer>.none)")
+                print("Tap \(tap) changed to: nil")
             }
 
             return KegSystem(leftTap: leftBeer, rightTap: rightBeer).encode(status: .ok, for: request)
@@ -194,13 +201,18 @@ extension HTTPHeaderName {
     static let onTapDeviceIdentifier = HTTPHeaderName("x-device-identifier")
 }
 
+// I wonder if we should opt channels in via slash commands?
+#if DEBUG
+let waterCoolerChannelID = "CGL0T4GLC" // #channel-for-allen
+#else
 let waterCoolerChannelID = "CGL7CJ03W"
+#endif
 
-extension OnTapController: SlackHandler {
+extension OnTapController: SlackResponder {
 
     var eventTypes: [EventType] { return [.message] }
 
-    func handleEvent(event: Event, slack: SlackMessageSender) {
+    func handleEvent(event: Event) {
 
         if event.message?.text?.contains("beer") ?? false {
 
