@@ -61,7 +61,6 @@ extension KarmaController: RouteCollection {
 }
 
 extension KarmaController: ServiceType {
-
     static func makeService(for container: Container) throws -> KarmaController {
         let slack = try container.make(Slack.self)
         let karmaController = KarmaController(karmaRepository: try container.make(KarmaRepository.self),
@@ -84,35 +83,36 @@ extension KarmaController: SlackResponder {
             return
         }
 
-        guard let karmaMessage = karmaParser.karmaMessageFrom(message: message) else {
-            return
-        }
+        let karmaMessages = karmaParser.karmaMessages(from: message)
 
-        guard karmaMessage.user != sendingUser else {
-            // TODO: Send error message back to offending user 
-            print("You can't adjust karma for yourself! Try spreading the wealth 😎")
-            return
-        }
+        karmaMessages.forEach { karmaMessage in
+            let slack = self.slack
 
-        let karmaRequest = self.karmaRepository.find(id: karmaMessage.user).flatMap { almostKarma in
-            if let karma = almostKarma {
-                let updatedKarma = Karma(id: karma.id, karma: karma.karma + karmaMessage.karma)
-                return self.karmaRepository.save(karma: updatedKarma)
-            }
-
-            throw Abort(.notFound)
-        }.catchFlatMap { error in
-            return self.karmaRepository.save(karma: karmaMessage.karmaData())
-        }
-
-        let slack = self.slack
-        karmaRequest
-            .do { karma in
-                let attachment = karmaMessage.slackAttachment(with: karma.karma)
-                try! slack.sendMessage(text: karmaMessage.slackUser(), channelId: channelId, attachments: [attachment])
-            }.catch { error in
-                let errorMessage = "Something went wrong. Please try again"
+            guard karmaMessage.user != sendingUser else {
+                let errorMessage = "You can't adjust karma for yourself! "
                 try! slack.sendErrorMessage(text: errorMessage, channelId: channelId, user: sendingUser)
+                return
             }
+
+            let karmaRequest = self.karmaRepository.find(id: karmaMessage.user).flatMap { almostKarma in
+                if let karma = almostKarma {
+                    let updatedKarma = Karma(id: karma.id, karma: karma.karma + karmaMessage.karma)
+                    return self.karmaRepository.save(karma: updatedKarma)
+                }
+
+                throw Abort(.notFound)
+            }.catchFlatMap { error in
+                return self.karmaRepository.save(karma: karmaMessage.karmaData())
+            }
+
+            karmaRequest
+                .do { karma in
+                    let attachment = karmaMessage.slackAttachment(with: karma.karma)
+                    try! slack.sendMessage(text: karmaMessage.slackUser(), channelId: channelId, attachments: [attachment])
+                }.catch { error in
+                    let errorMessage = "Something went wrong. Please try again"
+                    try! slack.sendErrorMessage(text: errorMessage, channelId: channelId, user: sendingUser)
+            }
+        }
     }
 }
