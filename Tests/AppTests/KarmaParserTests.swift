@@ -77,6 +77,14 @@ final class KarmaParserTests: XCTestCase {
 
         testMessage = "<@Ryan> <@Jacob> <@Allen>+++"
         compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+
+        expectedKarmaMessages = [KarmaMessage(user: "Jacob", karma: 1),
+                                 KarmaMessage(user: "Allen", karma: 2)]
+        testMessage = "<@Jacob>++ <@Allen>+++"
+        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+
+        testMessage = "asdfasd <@Jacob>++ sdfa <@Allen>+++"
+        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
     }
 
     func testThatItParsesMultipleUser_Negative() {
@@ -105,6 +113,14 @@ final class KarmaParserTests: XCTestCase {
         expectedKarmaMessages = [KarmaMessage(user: "Jacob", karma: -2),
                                  KarmaMessage(user: "Allen", karma: -2)]
         testMessage = "<@R yan> <@Jacob> <@Allen> ---"
+        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+
+        expectedKarmaMessages = [KarmaMessage(user: "Jacob", karma: -4),
+                                 KarmaMessage(user: "Allen", karma: -2)]
+        testMessage = "<@Jacob>----- <@Allen>--"
+        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+
+        testMessage = "asdfasd <@Jacob>----- sdfa <@Allen>--"
         compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
     }
 
