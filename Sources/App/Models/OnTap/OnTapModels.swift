@@ -9,7 +9,8 @@ import Foundation
 import FluentSQLite
 import Vapor
 
-enum Tap: String, Fluent.ID, Parameter {
+enum Tap: String, Parameter {
+
     static func resolveParameter(_ parameter: String, on container: Container) throws -> Tap {
         if let decoded = Tap(rawValue: parameter) {
             return decoded
@@ -22,27 +23,16 @@ enum Tap: String, Fluent.ID, Parameter {
     case left, right
 }
 
-struct Beer: Content, SQLiteStringModel, Migration {
+struct Beer: Content {
 
-    var id: String?
+    var id: String
     var untappdID: Double
     var name: String
     var breweryName: String
     var untappdURL: URL
 }
 
-extension Beer: RequestDecodable {
-
-    static func decode(from req: Request) throws -> EventLoopFuture<Beer> {
-        return try req.content.decode(Beer.self)
-    }
-}
-
-extension Beer: ResponseEncodable {
-
-    func encode(for req: Request) throws -> EventLoopFuture<Response> {
-        let data = try! JSONEncoder().encode(self)
-        let response = req.response(data as LosslessHTTPBodyRepresentable)
-        return response.future(response)
-    }
+struct KegSystem: Content {
+    var leftTap: Beer?
+    var rightTap: Beer?
 }
