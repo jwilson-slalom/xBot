@@ -13,6 +13,8 @@ struct KarmaMessage {
     let karma: Int
 }
 
+extension KarmaMessage: Equatable { }
+
 extension KarmaMessage {
 
     private func messageColor() -> String {
