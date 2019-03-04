@@ -42,8 +42,8 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     services.register(KarmaController.self)
     services.register(KarmaParser.self)
     services.register(APIKeyStorage.self)
-
-    try services.register(SlackKitProvider())
+    services.register(Slack.self)
+    services.register(SlackListener.self)
 }
 
 extension DatabaseIdentifier where D: Database {
