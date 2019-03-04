@@ -18,7 +18,9 @@ final class SlackListener: ServiceType {
         return shared
     }
 
+    private let respondersLock = DispatchQueue(label: "responders.lock", qos: .default, attributes: .concurrent)
     private var responders = [String: [(SlackResponder, Worker)]]()
+
     private let slackKit = SlackKit()
 
     public var apiKey: APIKeyStorage? {
@@ -51,10 +53,12 @@ final class SlackListener: ServiceType {
     func register(responder: SlackResponder, on eventLoop: Worker) {
         let serviceName = type(of: responder).serviceName
 
-        var responders = self.responders[serviceName] ?? []
-        responders.append((responder, eventLoop))
+        respondersLock.sync {
+            var responders = self.responders[serviceName] ?? []
+            responders.append((responder, eventLoop))
 
-        self.responders[serviceName] = responders
+            self.responders[serviceName] = responders
+        }
     }
 
     private func handleEvent(_ event: Event, onConnection connection: ClientConnection) {
