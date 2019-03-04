@@ -8,45 +8,58 @@
 import Vapor
 
 final class KarmaParser {
-    private let posRegex = "(<@([\\w].+?)>)[\\s]*(\\+{1,5}\\+)"
-    private let negRegex = "(<@([\\w].+?)>)[\\s]*(-{1,5}-)"
+    private let posRegex = "(<@[\\w].+?>)[\\s]*(\\+{1,5}\\+)"
+    private let negRegex = "(<@[\\w].+?>)[\\s]*(-{1,5}-)"
+    private let userRegexString = "<@([\\w\\d]+)>"
 
     let positiveRegex: NSRegularExpression!
     let negativeRegex: NSRegularExpression!
+    let userRegex: NSRegularExpression!
 
     init() {
         positiveRegex = try! NSRegularExpression(pattern: posRegex)
         negativeRegex = try! NSRegularExpression(pattern: negRegex)
+        userRegex = try! NSRegularExpression(pattern: userRegexString)
     }
 
-    func karmaMessageFrom(message: String) -> KarmaMessage? {
-        if let match = findMatch(regex: positiveRegex, message: message) {
+    func karmaMessages(from message: String) -> [KarmaMessage] {
+        if let match = findKarmaMatch(using: positiveRegex, on: message) {
             return match
         }
 
-        if let match = findMatch(regex: negativeRegex, message: message) {
+        if let match = findKarmaMatch(using: negativeRegex, on: message) {
             return match
         }
 
-        return nil
+        return []
     }
 
-    private func findMatch(regex: NSRegularExpression, message: String) -> KarmaMessage? {
+    private func findKarmaMatch(using regex: NSRegularExpression, on message: String) -> [KarmaMessage]? {
         if let match = regex.firstMatch(in: message, range: NSRange(location: 0, length: message.count)) {
-            return createMessage(match: match, message: message)
+            return process(match: match, on: message)
         }
         return nil
     }
 
-    private func createMessage(match: NSTextCheckingResult, message: String) -> KarmaMessage {
+    private func process(match: NSTextCheckingResult, on message: String) -> [KarmaMessage] {
         let parts = match.captureGroups(testedString: message)
         let karma: Int
-        if parts[2].contains("+") {
-            karma = parts[2].count - 1
+        if parts[1].contains("+") {
+            karma = parts[1].count - 1
         } else {
-            karma = (parts[2].count - 1) * -1
+            karma = (parts[1].count - 1) * -1
         }
-        return KarmaMessage(user: parts[1], karma: karma)
+
+        return usersFrom(message: parts[0]).map { userId in
+            return KarmaMessage(user: userId, karma: karma)
+        }
+    }
+
+    private func usersFrom(message: String) -> [String] {
+        return userRegex.matches(in: message, range: NSRange(location: 0, length: message.count)).map { match in
+            let groups = match.captureGroups(testedString: message)
+            return groups[0]
+        }
     }
 }
 
