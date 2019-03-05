@@ -27,22 +27,22 @@ final class SQLiteKarmaRepository: KarmaRepository {
     }
 
     func all() -> Future<[Karma]> {
-        return db.withConnection { conn in
-            return Karma.query(on: conn).all()
+        return db.withConnection { connection in
+            Karma.query(on: connection).all()
         }
     }
 
     func save(karma: Karma) -> Future<Karma> {
-        return db.withConnection { conn in
-			return karma.create(on: conn).catchFlatMap { error in
-				return karma.update(on: conn)
-			}
-		}
+        return db.withConnection { connection in
+            karma.create(on: connection).catchFlatMap { _ in
+                karma.update(on: connection)
+            }
+        }
     }
 
     func find(id: String) -> Future<Karma?> {
-        return db.withConnection { conn in
-            return Karma.find(id, on: conn)
+        return db.withConnection { connection in
+            Karma.find(id, on: connection)
         }
     }
 }
