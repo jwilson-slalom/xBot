@@ -23,6 +23,10 @@ final class SlackListener: ServiceType {
 
     private let slackKit = SlackKit()
 
+    public var botUser: User? {
+        return apiKey.flatMap { slackKit.clients[$0.botUserApiKey] }?.client?.authenticatedUser
+    }
+
     public var apiKey: APIKeyStorage? {
         didSet {
             guard apiKey != oldValue else { return }

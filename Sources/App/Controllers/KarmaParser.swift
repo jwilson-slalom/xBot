@@ -8,19 +8,13 @@
 import Vapor
 
 final class KarmaParser {
-    private let posRegex = "(<@[\\w].+?>)[\\s]*(\\+{1,5}\\+)"
-    private let negRegex = "(<@[\\w].+?>)[\\s]*(-{1,5}-)"
-    private let userRegexString = "<@([\\w\\d]+)>"
+    private static let posRegex = "(<@[\\w].+?>)[\\s]*(\\+{1,5}\\+)"
+    private static let negRegex = "(<@[\\w].+?>)[\\s]*(-{1,5}-)"
+    private static let userRegexString = "<@([\\w\\d]+)>"
 
-    let positiveRegex: NSRegularExpression!
-    let negativeRegex: NSRegularExpression!
-    let userRegex: NSRegularExpression!
-
-    init() {
-        positiveRegex = try! NSRegularExpression(pattern: posRegex)
-        negativeRegex = try! NSRegularExpression(pattern: negRegex)
-        userRegex = try! NSRegularExpression(pattern: userRegexString)
-    }
+    let positiveRegex = try! NSRegularExpression(pattern: posRegex)
+    let negativeRegex = try! NSRegularExpression(pattern: negRegex)
+    let userRegex = try! NSRegularExpression(pattern: userRegexString)
 
     func karmaMessages(from message: String) -> [KarmaMessage] {
         let positiveMessageMatch = findKarmaMatch(using: positiveRegex, on: message)
@@ -37,7 +31,7 @@ final class KarmaParser {
     }
 
     private func findKarmaMatch(using regex: NSRegularExpression, on message: String) -> [KarmaMessage] {
-        if let match = regex.firstMatch(in: message, range: NSRange(location: 0, length: message.count)) {
+        if let match = regex.firstMatch(in: message, range: NSRange(message.startIndex..<message.endIndex, in: message)) {
             return process(match: match, on: message)
         }
 
@@ -59,7 +53,7 @@ final class KarmaParser {
     }
 
     private func usersFrom(message: String) -> [String] {
-        return userRegex.matches(in: message, range: NSRange(location: 0, length: message.count)).map { match in
+        return userRegex.matches(in: message, range: NSRange(message.startIndex..<message.endIndex, in: message)).map { match in
             let groups = match.captureGroups(testedString: message)
             return groups[0]
         }
@@ -73,12 +67,11 @@ extension KarmaParser: ServiceType {
 }
 
 private extension NSTextCheckingResult {
-    func captureGroups(testedString:String) -> [String] {
-        var groups = [String]()
-        for i in  1 ..< self.numberOfRanges {
-            let group = String(testedString[Range(self.range(at: i), in: testedString)!])
-            groups.append(group)
+
+    func captureGroups(testedString: String) -> [String] {
+
+        return (1..<numberOfRanges).compactMap {
+            Range(range(at: $0), in: testedString).map { String(testedString[$0]) }
         }
-        return groups
     }
 }

@@ -12,6 +12,10 @@ struct Slack: ServiceType {
     private let slackKit = SlackKit()
     private let listener: SlackListener
 
+    public var botUser: User? {
+        return listener.botUser
+    }
+
     static func makeService(for container: Container) throws -> Slack {
         return Slack(apiKey: try container.make(APIKeyStorage.self),
                      listener: try container.make(SlackListener.self))
