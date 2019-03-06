@@ -10,7 +10,7 @@ import Vapor
 final class KarmaParser {
     private static let posRegex = "(<@[\\w].+?>)[\\s]*(\\+{1,5}\\+)"
     private static let negRegex = "(<@[\\w].+?>)[\\s]*(-{1,5}-)"
-    private static let userRegexString = "<@([\\w\\d]+)>"
+    private static let userRegexString = "<@([\\w\\d]+)\\|*[\\w\\d]*"
 
     let positiveRegex = try! NSRegularExpression(pattern: posRegex)
     let negativeRegex = try! NSRegularExpression(pattern: negRegex)
@@ -28,6 +28,14 @@ final class KarmaParser {
         }
 
         return []
+    }
+
+    func usersFrom(message: String) -> [String] {
+        return userRegex.matches(in: message, range: NSRange(message.startIndex..<message.endIndex, in: message)).map { match in
+            let groups = match.captureGroups(testedString: message)
+            return groups[0]
+        }
+
     }
 
     private func findKarmaMatch(using regex: NSRegularExpression, on message: String) -> [KarmaMessage] {
@@ -49,13 +57,6 @@ final class KarmaParser {
 
         return usersFrom(message: parts[0]).map { userId in
             return KarmaMessage(user: userId, karma: karma)
-        }
-    }
-
-    private func usersFrom(message: String) -> [String] {
-        return userRegex.matches(in: message, range: NSRange(message.startIndex..<message.endIndex, in: message)).map { match in
-            let groups = match.captureGroups(testedString: message)
-            return groups[0]
         }
     }
 }

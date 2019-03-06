@@ -52,12 +52,31 @@ final class KarmaController {
             return req.future(error: Abort(.badRequest))
         }
 
-        return karmaRepository.find(id: content.user_id ?? "")
-            .unwrap(or: Abort(.notFound))
-            .flatMap { karma in
-                client.post(responseUrl) { beforePost in
-                    let karmaMessage = KarmaMessage.init(user: karma.id ?? "", karma: karma.karma)
-                    try beforePost.content.encode(json: karmaMessage.response())
+        let userIds = karmaParser.usersFrom(message: content.text ?? "")
+        guard !userIds.isEmpty else {
+            return karmaRepository.find(id: content.user_id ?? "")
+                .unwrap(or: Abort(.notFound))
+                .flatMap { karma in
+                    client.post(responseUrl) { beforePost in
+                        let karmaMessage = KarmaMessage(user: karma.id ?? "", karma: karma.karma)
+                        let karmaResponse = KarmaResponse(attachments: [karmaMessage.karmaAttachment()])
+                        try beforePost.content.encode(json: karmaResponse)
+                    }
+            }
+        }
+
+        return karmaRepository.all()
+            .flatMap { allKarma -> Future<[KarmaAttachment]> in
+                let filtered = allKarma.filter { return userIds.contains($0.id ?? "") }
+
+                return req.future(filtered.map { karma -> KarmaAttachment in
+                    let message = KarmaMessage(user: karma.id ?? "", karma: karma.karma)
+                    return message.karmaAttachment()
+                })
+            }.flatMap { attachments -> Future<Response> in
+                return client.post(responseUrl) { beforePost in
+                    let karmaResponse = KarmaResponse(attachments: attachments)
+                    try beforePost.content.encode(json: karmaResponse)
                 }
             }
     }
