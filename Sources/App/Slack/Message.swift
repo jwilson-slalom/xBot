@@ -22,8 +22,8 @@ class Message {
     var attachments = [Attachment]()
 
     // Sender is only really useful for messages we've received
-    var sender: String? = nil
-    var timestamp: String? = nil
+    var sender: String?
+    var timestamp: String?
 
     init(text: String, channelID: ChannelID, parent: String? = nil) {
         self.text = text
@@ -51,6 +51,11 @@ class Message {
 
     /// Constructs a new message in response to this one. The response will be threaded on the original
     func threadedResponse(with text: String? = nil, attachments: [Attachment]? = nil) -> Message {
+        if parent != nil {
+            return self.response(with: text, attachments: attachments)
+        }
+
+        // Start new thread
         let response = Message(text: text ?? "", channelID: channelID, parent: timestamp)
         attachments.map { response.attachments = $0 }
         return response
