@@ -6,38 +6,29 @@
 //
 
 import Foundation
-import SlackKit
 
 extension OnTapController: SlackResponder {
 
-    var eventTypes: [EventType] { return [.message] }
-
-    func handleEvent(event: Event) {
-        guard let messageText = event.message?.text else { return }
+    func handle(message: Message) throws {
         guard let botUser = slack.botUser else { return }
-        guard let directedTo = messageText.userIDMentionedBeforeAnyOtherContent() else { return }
+        guard let directedTo = message.text.userIDMentionedBeforeAnyOtherContent() else { return }
         guard botUser.id == directedTo else { return }
 
-        if messageText.contains("beer") || messageText.contains("tap") {
+        // Keyword response
+        guard message.text.contains("beer") || message.text.contains("tap") else { return }
 
-            do {
-                try slack.sendMessage(
-                    text: "",
-                    channelId: event.channel!.id!,
-                    attachments: OnTapMessage.kegStatusAttachments(with: KegSystem(leftTap: OnTapMemory.leftBeer, rightTap: OnTapMemory.rightBeer))
-                )
-            } catch {
-                log.error("Failed to send slack message: \(error)")
-            }
-        }
+        let kegSystem = KegSystem(leftTap: OnTapMemory.leftBeer, rightTap: OnTapMemory.rightBeer)
+        let attachments = OnTapMessage.kegStatusAttachments(with: kegSystem)
+        let response = message.response(attachments: attachments)
+
+        try slack.send(message: response)
     }
 
     func notifySlackOfNewBeer(_ beer: Beer?, on tap: Tap) throws {
-        try slack.sendMessage(
-            text: "",
-            channelId: Channel.onTapNewBeerNotificationDestination,
-            attachments: [OnTapMessage.newBeerAttachment(for: tap, with: beer)]
-        )
+        let message = Message(text: "", channelID: .onTapNewBeerNotificationDestination)
+        message.attachments = [OnTapMessage.newBeerAttachment(for: tap, with: beer)]
+
+        try slack.send(message: message)
     }
 }
 

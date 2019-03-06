@@ -2,7 +2,6 @@ Packages
 .build
 xcuserdata
 *.xcodeproj
-*.resolved
 DerivedData/
 .DS_Store
 secrets.json
