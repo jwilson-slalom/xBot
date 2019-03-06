@@ -11,6 +11,7 @@ import Vapor
 struct Slack: ServiceType {
     private let slackKit = SlackKit()
     private let listener: SlackListener
+    private let log: Logger
 
     public var botUser: User? {
         return listener.botUser
@@ -18,11 +19,13 @@ struct Slack: ServiceType {
 
     static func makeService(for container: Container) throws -> Slack {
         return Slack(apiKey: try container.make(APIKeyStorage.self),
-                     listener: try container.make(SlackListener.self))
+                     listener: try container.make(SlackListener.self),
+                     logger: try container.make(Logger.self))
     }
 
-    init(apiKey: APIKeyStorage, listener: SlackListener) {
+    init(apiKey: APIKeyStorage, listener: SlackListener, logger: Logger) {
         self.listener = listener
+        self.log = logger
         slackKit.addWebAPIAccessWithToken(apiKey.botUserApiKey)
     }
 
@@ -30,29 +33,47 @@ struct Slack: ServiceType {
         listener.register(responder: responder, on: worker)
     }
 
-    func sendMessage(text: String, channelId: String, attachments: [Attachment]?) throws {
+    func send(message: Message) throws {
         guard let web = slackKit.webAPI else { throw Abort(.internalServerError) }
 
-        web.sendMessage(
-            channel: channelId,
-            text: text,
-            attachments: attachments,
-            success: { (ts, channel) in
+        if let parentMessage = message.parent {
+            web.sendThreadedMessage(
+                channel: message.channelID.id,
+                thread: parentMessage,
+                text: message.text,
+                attachments: message.attachments,
+                success: { (ts, channel) in
 
-            },
-            failure: { error in
+                },
+                failure: { error in
+                    self.log.error("Sending slack message encounted error: \(error)")
+                })
+        } else {
+            web.sendMessage(
+                channel: message.channelID.id,
+                text: message.text,
+                attachments: message.attachments,
+                success: { (ts, channel) in
 
-            }
-        )
+                },
+                failure: { error in
+                    self.log.error("Sending slack message encounted error: \(error)")
+                }
+            )
+        }
     }
 
-    func sendErrorMessage(text: String, channelId: String, user: String) throws {
+    func send(message: Message, onlyVisibleTo user: String) throws {
         guard let web = slackKit.webAPI else { throw Abort(.internalServerError) }
 
-        web.sendEphemeral(channel: channelId, text: text, user: user, success: { (ts, channel) in
+        if let _ = message.parent {
+            // Not yet supported by SlackKit (should be supported as far as I can tell)
+        } else {
+            web.sendEphemeral(channel: message.channelID.id, text: message.text, user: user, success: { (ts, channel) in
 
-        }, failure: { Error in
-
-        })
+            }, failure: { error in
+                self.log.error("Sending ephemeral slack message encounted error: \(error)")
+            })
+        }
     }
 }

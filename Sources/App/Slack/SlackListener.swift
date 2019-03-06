@@ -18,10 +18,11 @@ final class SlackListener: ServiceType {
         return shared
     }
 
-    private let respondersLock = DispatchQueue(label: "responders.lock", qos: .default, attributes: .concurrent)
+    private let respondersLock = DispatchQueue(label: "responders.lock", qos: .default)
     private var responders = [String: [(SlackResponder, Worker)]]()
 
     private let slackKit = SlackKit()
+    private let log = ConsoleLogger(console: Terminal())
 
     public var botUser: User? {
         return apiKey.flatMap { slackKit.clients[$0.botUserApiKey] }?.client?.authenticatedUser
@@ -42,7 +43,7 @@ final class SlackListener: ServiceType {
     private init() {
         // Types not in this list are ignored entirely
         let eventTypes: [EventType] = [.message,
-                                       .channelJoined]
+                                       .teamJoin]
 
         for type in eventTypes {
             slackKit.notificationForEvent(type) { (event, connection) in
@@ -67,19 +68,33 @@ final class SlackListener: ServiceType {
 
     private func handleEvent(_ event: Event, onConnection connection: ClientConnection) {
         guard let type = event.type else {
-            print("Unhandled event type")
+            print("Event without a type came in")
             return
         }
 
         // TODO: Rotate which ones are chosen, will probably need a more formal type
-        responders
-            .values
-            .compactMap { $0.first }
-            .filter { $0.0.eventTypes.contains(type) }
-            .forEach { responder, worker in
-                worker.eventLoop.execute {
-                    responder.handleEvent(event: event)
+
+        let targets = responders.values.compactMap { $0.first }.filter { $0.0.eventTypes.contains(type) }
+
+        if type == .message, let message = Message(event: event) {
+
+            targets.forEach { responder, worker in
+                worker.eventLoop.submit {
+                    try responder.handle(message: message)
+                }.catch { error in
+                    self.log.debug("Slack responder threw an error: \(error)")
                 }
             }
+            return
+        }
+
+        // Fallback to the generic event handler
+        targets.forEach { responder, worker in
+            worker.eventLoop.submit {
+                try responder.handle(event: event)
+            }.catch { error in
+                self.log.debug("Slack responder threw an error: \(error)")
+            }
+        }
     }
 }
