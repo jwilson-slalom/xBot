@@ -33,7 +33,7 @@ final class SlackListener: ServiceType {
             guard apiKey != oldValue else { return }
 
             if let apiKey = apiKey {
-                slackKit.addRTMBotWithAPIToken(apiKey.botUserApiKey, client: nil, rtm: VaporEngineRTM())
+                slackKit.addRTMBotWithAPIToken(apiKey.botUserApiKey, client: SimpleClient(), rtm: VaporEngineRTM())
             } else if let oldKey = oldValue {
                 slackKit.clients[oldKey.botUserApiKey]?.rtm?.disconnect()
             }
@@ -96,6 +96,16 @@ final class SlackListener: ServiceType {
             }.catch { error in
                 self.log.debug("Slack responder threw an error: \(error)")
             }
+        }
+    }
+}
+
+extension SlackListener {
+
+    final class SimpleClient: SKClient.Client {
+
+        override func notificationForEvent(_ event: Event, type: EventType) {
+            // Nothing, disables super class
         }
     }
 }
