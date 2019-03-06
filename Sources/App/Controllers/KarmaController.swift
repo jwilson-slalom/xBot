@@ -68,17 +68,6 @@ final class KarmaController {
         }
 
         let userIds = karmaParser.usersFrom(message: content.text ?? "")
-        guard !userIds.isEmpty else {
-            return karmaRepository.find(id: content.user_id ?? "")
-                .unwrap(or: Abort(.notFound))
-                .flatMap { karma in
-                    client.post(responseUrl) { beforePost in
-                        let karmaMessage = KarmaMessage(user: karma.id ?? "", karma: karma.karma)
-                        let karmaResponse = KarmaResponse(attachments: [karmaMessage.karmaAttachment()])
-                        try beforePost.content.encode(json: karmaResponse)
-                    }
-            }
-        }
 
         return karmaRepository.find(ids: userIds)
             .flatMap { karma -> Future<[KarmaAttachment]> in
