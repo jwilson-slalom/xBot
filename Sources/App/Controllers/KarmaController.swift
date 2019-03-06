@@ -10,8 +10,6 @@ final class KarmaController {
     private let slack: Slack
     private let log: Logger
 
-    private let queue = DispatchQueue(label: "commandQueue", qos: .background)
-
     init(karmaRepository: KarmaRepository,
          slack: Slack,
          log: Logger) {
@@ -47,22 +45,20 @@ final class KarmaController {
         return karmaRepository.find(id: id).unwrap(or: Abort(.notFound))
     }
 
-    func karmaCommand(_ req: Request, content: Command) throws -> Future<HTTPStatus> {
-        self.queue.async {
-            do {
-                let _ = try self.processKarmaCommand(req, content: content)
-            } catch
-            {
-                self.log.debug("Could not process karma command: \(error)")
-            }
-        }
+    func karmaCommand(_ req: Request, content: Command) throws -> Future<Response> {
 
-        return req.future(HTTPStatus.ok)
+        // Do this in the background, you could check the response_url first and inform slack
+        // of that error here and pass it into the method
+        processKarmaCommand(req, content: content)
+            .catch {
+                self.log.error("Failed to respond to Slack slash command \($0)")
+            }
+
+        // Respond immediately
+        return req.response().encode(status: .ok, for: req)
     }
 
-    private func processKarmaCommand(_ req: Request, content: Command) throws -> Future<Response> {
-        let client = try req.client()
-
+    private func processKarmaCommand(_ req: Request, content: Command) -> Future<Response> {
         guard let responseUrl = content.response_url else {
             return req.future(error: Abort(.badRequest))
         }
@@ -70,18 +66,14 @@ final class KarmaController {
         let userIds = karmaParser.usersFrom(message: content.text ?? "")
 
         return karmaRepository.find(ids: userIds)
-            .flatMap { karma -> Future<[KarmaAttachment]> in
-                return req.future(karma.map { karma -> KarmaAttachment in
-                    let message = KarmaMessage(user: karma.id ?? "", karma: karma.karma)
-                    return message.karmaAttachment()
-                })
-            }
-            .flatMap { attachments -> Future<Response> in
-                return client.post(responseUrl) { beforePost in
+            .flatMap { karma in
+                // TODO: Empty karma should get a simple "couldn't find x" or something
+                let attachments = karma.map { KarmaMessage(user: $0.id ?? "", karma: $0.karma).karmaAttachment() }
+                return try req.client().post(responseUrl) { beforePost in
                     let karmaResponse = KarmaResponse(attachments: attachments)
                     try beforePost.content.encode(json: karmaResponse)
+                }
             }
-        }
     }
 }
 
