@@ -32,6 +32,21 @@ final class KarmaController {
         }
     }
 
+    /// Saves a decoded `Karma` to the database.
+    func create(_ req: Request, content: Karma) throws -> Future<Karma> {
+        return karmaRepository.save(karma: content)
+    }
+
+    /// Saves a decoded `Karma` to the database.
+    func update(_ req: Request, content: Karma) throws -> Future<Karma> {
+        return karmaRepository.save(karma: content)
+    }
+
+    func find(_ req: Request) throws -> Future<Karma> {
+        let id = try req.parameters.next(String.self)
+        return karmaRepository.find(id: id).unwrap(or: Abort(.notFound))
+    }
+
     func karmaCommand(_ req: Request, content: Command) throws -> Future<HTTPStatus> {
         self.queue.async {
             do {
@@ -65,35 +80,19 @@ final class KarmaController {
             }
         }
 
-        return karmaRepository.all()
-            .flatMap { allKarma -> Future<[KarmaAttachment]> in
-                let filtered = allKarma.filter { return userIds.contains($0.id ?? "") }
-
-                return req.future(filtered.map { karma -> KarmaAttachment in
+        return karmaRepository.find(ids: userIds)
+            .flatMap { karma -> Future<[KarmaAttachment]> in
+                return req.future(karma.map { karma -> KarmaAttachment in
                     let message = KarmaMessage(user: karma.id ?? "", karma: karma.karma)
                     return message.karmaAttachment()
                 })
-            }.flatMap { attachments -> Future<Response> in
+            }
+            .flatMap { attachments -> Future<Response> in
                 return client.post(responseUrl) { beforePost in
                     let karmaResponse = KarmaResponse(attachments: attachments)
                     try beforePost.content.encode(json: karmaResponse)
-                }
             }
-    }
-
-    /// Saves a decoded `Karma` to the database.
-    func create(_ req: Request, content: Karma) throws -> Future<Karma> {
-        return karmaRepository.save(karma: content)
-    }
-
-    /// Saves a decoded `Karma` to the database.
-    func update(_ req: Request, content: Karma) throws -> Future<Karma> {
-        return karmaRepository.save(karma: content)
-    }
-
-    func find(_ req: Request) throws -> Future<Karma> {
-        let id = try req.parameters.next(String.self)
-        return karmaRepository.find(id: id).unwrap(or: Abort(.notFound))
+        }
     }
 }
 

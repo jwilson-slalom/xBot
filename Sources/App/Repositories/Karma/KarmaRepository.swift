@@ -6,12 +6,14 @@
 //
 
 import Vapor
+import Fluent
 import FluentSQLite
 
 protocol KarmaRepository: ServiceType {
     func all() -> Future<[Karma]>
     func save(karma: Karma) -> Future<Karma>
     func find(id: String) -> Future<Karma?>
+    func find(ids: [String]) -> Future<[Karma]>
 }
 
 extension Database {
@@ -43,6 +45,12 @@ final class SQLiteKarmaRepository: KarmaRepository {
     func find(id: String) -> Future<Karma?> {
         return db.withConnection { connection in
             Karma.find(id, on: connection)
+        }
+    }
+
+    func find(ids: [String]) -> Future<[Karma]> {
+        return db.withConnection { connection in
+            Karma.query(on: connection).filter(\.id ~~ ids).all()
         }
     }
 }
