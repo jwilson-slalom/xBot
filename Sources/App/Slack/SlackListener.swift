@@ -33,7 +33,7 @@ final class SlackListener: ServiceType {
             guard apiKey != oldValue else { return }
 
             if let apiKey = apiKey {
-                slackKit.addRTMBotWithAPIToken(apiKey.botUserApiKey, rtm: VaporEngineRTM())
+                slackKit.addRTMBotWithAPIToken(apiKey.botUserApiKey, client: nil, rtm: VaporEngineRTM())
             } else if let oldKey = oldValue {
                 slackKit.clients[oldKey.botUserApiKey]?.rtm?.disconnect()
             }
