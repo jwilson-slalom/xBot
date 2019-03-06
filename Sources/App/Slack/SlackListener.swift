@@ -43,6 +43,7 @@ final class SlackListener: ServiceType {
     private init() {
         // Types not in this list are ignored entirely
         let eventTypes: [EventType] = [.message,
+                                       .memberJoinedChannel,
                                        .teamJoin]
 
         for type in eventTypes {
