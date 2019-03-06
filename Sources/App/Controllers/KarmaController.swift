@@ -10,6 +10,8 @@ final class KarmaController {
     private let slack: Slack
     private let log: Logger
 
+    private let queue = DispatchQueue(label: "commandQueue", qos: .background)
+
     init(karmaRepository: KarmaRepository,
          slack: Slack,
          log: Logger) {
@@ -28,6 +30,36 @@ final class KarmaController {
         return try req.content.decode(Command.self).flatMap { _ in
             try Leaderboard(text: "leaderboard").encode(for: req)
         }
+    }
+
+    func karmaCommand(_ req: Request, content: Command) throws -> Future<HTTPStatus> {
+        self.queue.async {
+            do {
+                let _ = try self.processKarmaCommand(req, content: content)
+            } catch
+            {
+                self.log.debug("Could not process karma command: \(error)")
+            }
+        }
+
+        return req.future(HTTPStatus.ok)
+    }
+
+    private func processKarmaCommand(_ req: Request, content: Command) throws -> Future<Response> {
+        let client = try req.client()
+
+        guard let responseUrl = content.response_url else {
+            return req.future(error: Abort(.badRequest))
+        }
+
+        return karmaRepository.find(id: content.user_id ?? "")
+            .unwrap(or: Abort(.notFound))
+            .flatMap { karma in
+                client.post(responseUrl) { beforePost in
+                    let karmaMessage = KarmaMessage.init(user: karma.id ?? "", karma: karma.karma)
+                    try beforePost.content.encode(json: karmaMessage.response())
+                }
+            }
     }
 
     /// Saves a decoded `Karma` to the database.
@@ -52,8 +84,8 @@ extension KarmaController: RouteCollection {
         router.post(Karma.self, at:"karma", use: create)
         router.put(Karma.self, at:"karma", use: update)
         router.get("karma", String.parameter, use: find)
-//        router.post(Command.self, at: "command", use: command)
         router.post("command", use: command)
+        router.post(Command.self, at: "command/karma", use: karmaCommand)
     }
 }
 

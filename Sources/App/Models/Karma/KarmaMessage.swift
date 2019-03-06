@@ -8,6 +8,10 @@
 import Foundation
 import SlackKit
 
+struct KarmaResponse: Codable {
+    let text: String
+}
+
 struct KarmaMessage {
     let user: String
     let karma: Int
@@ -40,6 +44,10 @@ extension KarmaMessage {
             "color": messageColor(),
 //            "pretext": user,
             "text": "Karma \(changed()) to \(newKarmaTotal) \(emojiRelation(total: newKarmaTotal))"])
+    }
+
+    func currentCount() -> String {
+        return "\(slackUser()) has \(karma) karma \(emojiRelation(total: karma))"
     }
 
     private func emojiRelation(total: Int) -> String {
@@ -95,5 +103,9 @@ extension KarmaMessage {
 
     func karmaData() -> Karma {
         return Karma(id: user, karma: karma)
+    }
+
+    func response() -> KarmaResponse {
+        return KarmaResponse(text: currentCount())
     }
 }
