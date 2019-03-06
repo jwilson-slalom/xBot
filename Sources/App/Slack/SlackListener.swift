@@ -69,7 +69,7 @@ final class SlackListener: ServiceType {
 
     private func handleEvent(_ event: Event, onConnection connection: ClientConnection) {
         guard let type = event.type else {
-            print("Event without a type came in")
+            self.log.error("Event without a type came in")
             return
         }
 
@@ -83,7 +83,7 @@ final class SlackListener: ServiceType {
                 worker.eventLoop.submit {
                     try responder.handle(message: message)
                 }.catch { error in
-                    self.log.debug("Slack responder threw an error: \(error)")
+                    self.log.error("Slack responder threw an error: \(error)")
                 }
             }
             return
@@ -94,7 +94,7 @@ final class SlackListener: ServiceType {
             worker.eventLoop.submit {
                 try responder.handle(event: event)
             }.catch { error in
-                self.log.debug("Slack responder threw an error: \(error)")
+                self.log.error("Slack responder threw an error: \(error)")
             }
         }
     }
