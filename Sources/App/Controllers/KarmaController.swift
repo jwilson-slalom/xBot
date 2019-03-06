@@ -87,18 +87,14 @@ extension KarmaController: SlackResponder {
             }
 
             // Update karma
-            let karmaRequest = karmaRepository.find(id: karmaMessage.user)
+            karmaRepository.find(id: karmaMessage.user)
                 .unwrap(or: Abort(.notFound))
                 .flatMap { storedKarma in
                     storedKarma.karma += karmaMessage.karma
                     return repository.save(karma: storedKarma)
                 }.catchFlatMap { _ in
                     repository.save(karma: karmaMessage.karmaData())
-                }
-
-            // Respond with the updated karam
-            karmaRequest
-                .thenThrowing { karma -> Void in
+                }.thenThrowing { karma -> Void in
                     let response = message.response(with: karmaMessage.slackUser(),
                                                     attachments: [karmaMessage.slackAttachment(with: karma.karma)])
                     try slack.send(message: response)
