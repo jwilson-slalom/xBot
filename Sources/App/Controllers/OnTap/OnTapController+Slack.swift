@@ -17,18 +17,13 @@ extension OnTapController: SlackResponder {
         // Keyword response
         guard message.text.contains("beer") || message.text.contains("tap") else { return }
 
-        let kegSystem = KegSystem(leftTap: OnTapMemory.leftBeer, rightTap: OnTapMemory.rightBeer)
-        let attachments = OnTapMessage.kegStatusAttachments(with: kegSystem)
-        let response = message.response(attachments: attachments)
-
-        try slack.send(message: response)
+        try slack.send(message: OnTapMessage(respondingTo: message, kegSystem: OnTapMemory.kegSystem))
     }
 
     func notifySlackOfNewBeer(_ beer: Beer?, on tap: Tap) throws {
-        let message = Message(text: "", channelID: .onTapNewBeerNotificationDestination)
-        message.attachments = [OnTapMessage.newBeerAttachment(for: tap, with: beer)]
+        guard let beer = beer else { return } // No message for when a tap goes offline, I don't think anyone cares
 
-        try slack.send(message: message)
+        try slack.send(message: OnTapMessage(newBeer: beer, tap: tap))
     }
 }
 
