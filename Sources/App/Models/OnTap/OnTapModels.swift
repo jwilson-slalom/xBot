@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import FluentSQLite
 import Vapor
 
 enum Tap: String, Parameter {
@@ -24,15 +23,22 @@ enum Tap: String, Parameter {
 }
 
 struct Beer: Content {
-
-    var id: String
-    var untappdID: Double
-    var name: String
-    var breweryName: String
-    var untappdURL: URL
+    let untappdID: Double
+    let name: String
+    let breweryName: String
+    let untappdURL: URL
+    let style: String
+    let abv: Double
+    let ibu: Double
 }
 
 struct KegSystem: Content {
-    var leftTap: Beer?
-    var rightTap: Beer?
+    enum CodingKeys: String, CodingKey {
+        case leftBeer, rightBeer
+    }
+
+    var leftBeer: Beer?
+    var rightBeer: Beer?
+
+    var updated = Date.distantPast
 }

@@ -11,21 +11,27 @@ enum OnTapMemory {
 
     // Absolutely not threadsafe
     fileprivate static var leftBeerChangeCount: Int64 = -1
-    static var leftBeer: Beer?
-
     fileprivate static var rightBeerChangeCount: Int64 = -1
-    static var rightBeer: Beer?
+
+    private static let lock = DispatchQueue(label: "responders.lock", qos: .default, attributes: .concurrent)
+    static private var _kegSystem = KegSystem(leftBeer: nil, rightBeer: nil, updated: .distantPast)
+    static private(set) var kegSystem: KegSystem {
+        get { return lock.sync { _kegSystem } }
+        set { lock.async(flags: .barrier) { _kegSystem = newValue } }
+    }
 
     static func set(beer newBeer: Beer?, on tap: Tap) -> Bool {
         var oldValue: Beer?
         switch tap {
         case .left:
-            oldValue = leftBeer
-            leftBeer = newBeer
+            oldValue = kegSystem.leftBeer
+            kegSystem.leftBeer = newBeer
         case .right:
-            oldValue = rightBeer
-            rightBeer = newBeer
+            oldValue = kegSystem.rightBeer
+            kegSystem.rightBeer = newBeer
         }
+
+        kegSystem.updated = Date()
 
         func different(_ oldBeer: Beer?, _ newBeer: Beer?) -> Bool {
             switch (oldValue, newBeer) {
@@ -33,7 +39,7 @@ enum OnTapMemory {
                 fallthrough
             case (.none, .some), (.some, .none):
                 return true
-            default:
+            case (.none, .none), (.some, .some):
                 return false
             }
         }

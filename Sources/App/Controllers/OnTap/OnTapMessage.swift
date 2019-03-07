@@ -7,52 +7,76 @@
 
 import SlackKit
 
-struct OnTapMessage {
+class OnTapMessage: Message {
 
-    static func newBeerAttachment(for tap: Tap, with beer: Beer?) -> Attachment {
-        return beer.map { newBeerAttachment(for: tap, with: $0) } ?? Attachment(fallback: "Error", title: "Error")
+    convenience init(respondingTo incomingMessage: Message, kegSystem: KegSystem) {
+        self.init(text: "", channelID: incomingMessage.channelID, parent: incomingMessage.parent)
+
+        attachments = OnTapMessage.kegStatusAttachments(with: kegSystem)
     }
 
-    static func newBeerAttachment(for tap: Tap, with beer: Beer) -> Attachment {
+    convenience init(newBeer beer: Beer, tap: Tap) {
+        self.init(text: "", channelID: .onTapNewBeerNotificationDestination)
 
-        return Attachment(attachment: ["fallback": "New beer",
-                                       "color": "#36a64f",
-                                       "title": "\(beer.name) is now on the \(tap == .left ? "Left" : "Right") Tap 🍻",
-            "title_link": beer.untappdURL.absoluteString,
-            "fields": [
-                "value": beer.breweryName,
-                "short": false
-            ],
-            "footer": "Brought to you by: _onTap"
-            ]
-        )
+        attachments = [OnTapMessage.newBeerAttachment(for: tap, with: beer)]
     }
 
-    static func kegStatusAttachments(with kegSystem: KegSystem) -> [Attachment] {
+    private static func newBeerAttachment(for tap: Tap, with beer: Beer) -> Attachment {
 
-        func beerText(_ beer: Beer?) -> String? {
-            guard let beer = beer else { return nil }
+        let fallback = "🍻 \(beer.name) from \(beer.breweryName) is now on tap in the Capacitor Café"
+        let text = "🍻 <\(beer.untappdURL.absoluteString)|*\(beer.name)*> from _\(beer.breweryName)_ is now on tap in the Capacitor Café"
 
-            return beer.name + " - " + beer.breweryName
-        }
-        return
-            [Attachment(attachment:
-                [
-                    "fallback": "Required plain-text summary of the attachment.",
-                    "color": "#36a64f",
-                    "pretext": "🍻",
-                    "title": kegSystem.leftTap == nil ? "Offline" : "Left Tap",
-                    "title_link": kegSystem.leftTap?.untappdURL.absoluteString as Any,
-                    "text": beerText(kegSystem.leftTap) as Any
-                ]),
-             Attachment(attachment:
-                [
-                    "fallback": "Required plain-text summary of the attachment.",
-                    "color": "#36a64f",
-                    "title": kegSystem.rightTap == nil ? "Offline" : "Right Tap",
-                    "title_link": kegSystem.rightTap?.untappdURL.absoluteString as Any,
-                    "text": beerText(kegSystem.rightTap) as Any
-                ])
+        let attachment: [String: Any] = [
+            "fallback": fallback,
+            "color": "#00ffff",
+            "mrkdwn_in": ["text"],
+            "text": text
         ]
+        return Attachment(attachment: attachment)
+    }
+
+    private static func kegStatusAttachments(with kegSystem: KegSystem) -> [Attachment] {
+
+        func beerText(_ beer: Beer?) -> String {
+            guard let beer = beer else { return "Offline" }
+
+            let abvSignal = beer.abv > 7.5 ? "⚠️ " : ""
+            return """
+                    *<\(beer.untappdURL.absoluteString)|\(beer.name)>*
+                    \(beer.breweryName)
+                    \(beer.style)
+                    \(abvSignal)\(beer.abv)% abv - \(Int(beer.ibu)) ibu
+                    """
+        }
+
+        var fallbackText = ""
+        if let leftBeer = kegSystem.leftBeer {
+            fallbackText += "Left: \(leftBeer.name)"
+        }
+        if let rightBeer = kegSystem.rightBeer {
+            fallbackText.isNotEmpty ? fallbackText += ", " : ()
+            fallbackText += "Right: \(rightBeer.name)"
+        }
+
+        let attachment: [String: Any] = [
+            "fallback": fallbackText,
+            "color": "00FFFF",
+            "pretext": "Here's what's _onTap! 🍻",
+            "mrkdwn_in": ["fields"],
+            "fields": [
+                [
+                    "value": beerText(kegSystem.leftBeer),
+                    "short": true
+                ],
+                [
+                    "value": beerText(kegSystem.rightBeer),
+                    "short": true
+                ]
+            ],
+            "footer": "Updated",
+            "ts": Int(kegSystem.updated.timeIntervalSince1970)
+        ]
+
+        return [Attachment(attachment: attachment)]
     }
 }

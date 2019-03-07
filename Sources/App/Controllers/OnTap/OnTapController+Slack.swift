@@ -6,38 +6,24 @@
 //
 
 import Foundation
-import SlackKit
 
 extension OnTapController: SlackResponder {
 
-    var eventTypes: [EventType] { return [.message] }
-
-    func handleEvent(event: Event) {
-        guard let messageText = event.message?.text else { return }
+    func handle(message: Message) throws {
         guard let botUser = slack.botUser else { return }
-        guard let directedTo = messageText.userIDMentionedBeforeAnyOtherContent() else { return }
+        guard let directedTo = message.text.userIDMentionedBeforeAnyOtherContent() else { return }
         guard botUser.id == directedTo else { return }
 
-        if messageText.contains("beer") || messageText.contains("tap") {
+        // Keyword response
+        guard message.text.contains("beer") || message.text.contains("tap") else { return }
 
-            do {
-                try slack.sendMessage(
-                    text: "",
-                    channelId: event.channel!.id!,
-                    attachments: OnTapMessage.kegStatusAttachments(with: KegSystem(leftTap: OnTapMemory.leftBeer, rightTap: OnTapMemory.rightBeer))
-                )
-            } catch {
-                log.error("Failed to send slack message: \(error)")
-            }
-        }
+        try slack.send(message: OnTapMessage(respondingTo: message, kegSystem: OnTapMemory.kegSystem))
     }
 
     func notifySlackOfNewBeer(_ beer: Beer?, on tap: Tap) throws {
-        try slack.sendMessage(
-            text: "",
-            channelId: Channel.onTapNewBeerNotificationDestination,
-            attachments: [OnTapMessage.newBeerAttachment(for: tap, with: beer)]
-        )
+        guard let beer = beer else { return } // No message for when a tap goes offline, I don't think anyone cares
+
+        try slack.send(message: OnTapMessage(newBeer: beer, tap: tap))
     }
 }
 

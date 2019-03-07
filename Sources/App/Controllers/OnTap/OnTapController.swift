@@ -6,8 +6,6 @@
 //
 
 import Vapor
-import HTTP
-import Routing
 
 private let iPadDeviceID = "21F17F00-A94B-4BE9-A03D-BA6A20D709FC"
 
@@ -45,7 +43,7 @@ extension OnTapController: RouteCollection {
     }
 
     func getBeers(request: Request) -> KegSystem {
-        return KegSystem(leftTap: OnTapMemory.leftBeer, rightTap: OnTapMemory.rightBeer)
+        return OnTapMemory.kegSystem
     }
 
     func update(request: Request, beer: Beer) throws -> EventLoopFuture<Response> {
@@ -80,7 +78,7 @@ extension OnTapController: RouteCollection {
             try notifySlackOfNewBeer(beer, on: tap)
         }
 
-        return KegSystem(leftTap: OnTapMemory.leftBeer, rightTap: OnTapMemory.rightBeer).encode(status: .ok, for: request)
+        return OnTapMemory.kegSystem.encode(status: .ok, for: request)
     }
 }
 

@@ -1,6 +1,4 @@
 import Vapor
-import class SlackKit.Event
-import enum SlackKit.EventType
 
 /// Controls basic CRUD operations on `Karma`s.
 final class KarmaController {
@@ -111,46 +109,37 @@ extension KarmaController: ServiceType {
 
 extension KarmaController: SlackResponder {
 
-    var eventTypes: [EventType] { return [.message] }
+    func handle(message: Message) throws {
+        guard let sendingUser = message.sender else { return }
 
-    func handleEvent(event: Event) {
-        guard let message = event.text,
-              let channelId = event.channel?.id,
-              let sendingUser = event.user?.id else {
-            return
-        }
+        let karmaMessages = karmaParser.karmaMessages(from: message.text)
 
-        let karmaMessages = karmaParser.karmaMessages(from: message)
-
-        karmaMessages.forEach { karmaMessage in
+        try karmaMessages.forEach { karmaMessage in
             let slack = self.slack
             let repository = self.karmaRepository
             let log = self.log
 
             guard karmaMessage.user != sendingUser else {
                 let errorMessage = "You can't adjust karma for yourself! "
-                try! slack.sendErrorMessage(text: errorMessage, channelId: channelId, user: sendingUser)
+                try slack.send(message: message.response(with: errorMessage), onlyVisibleTo: sendingUser)
                 return
             }
 
             // Update karma
-            let karmaRequest = karmaRepository.find(id: karmaMessage.user)
+            karmaRepository.find(id: karmaMessage.user)
                 .unwrap(or: Abort(.notFound))
                 .flatMap { storedKarma in
                     storedKarma.karma += karmaMessage.karma
                     return repository.save(karma: storedKarma)
                 }.catchFlatMap { _ in
                     repository.save(karma: karmaMessage.karmaData())
-                }
-
-            // Respond with the updated karam
-            karmaRequest
-                .thenThrowing { karma -> Void in
-                    let attachment = karmaMessage.slackAttachment(with: karma.karma)
-                    try slack.sendMessage(text: karmaMessage.slackUser(), channelId: channelId, attachments: [attachment])
+                }.thenThrowing { karma -> Void in
+                    let response = message.response(with: karmaMessage.slackUser(),
+                                                    attachments: [karmaMessage.slackAttachment(with: karma.karma)])
+                    try slack.send(message: response)
                 }.catchMap { error in
                     let errorMessage = "Something went wrong. Please try again"
-                    try slack.sendErrorMessage(text: errorMessage, channelId: channelId, user: sendingUser)
+                    try slack.send(message: message.response(with: errorMessage), onlyVisibleTo: sendingUser)
                 }.catch {
                     log.error("Completely unhandled Karma error occurred. This is bad, so bad: \($0)")
                 }
