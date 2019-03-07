@@ -24,7 +24,7 @@ extension OnTapController: ServiceType {
 
     static func makeService(for container: Container) throws -> OnTapController {
         let slack = try container.make(Slack.self)
-        let onTap = OnTapController(slackClient: slack, logger: try container.make(Logger.self))
+        let onTap = OnTapController(slackClient: slack, logger: try container.make())
         slack.register(responder: onTap, on: container)
 
         return onTap
