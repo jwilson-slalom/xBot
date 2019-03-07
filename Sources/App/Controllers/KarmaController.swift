@@ -44,33 +44,37 @@ final class KarmaController {
     }
 
     func karmaCommand(_ req: Request, content: Command) throws -> Future<Response> {
+        guard let responseUrl = content.response_url else {
+            return req.future(error: Abort(.badRequest))
+        }
 
-        // Do this in the background, you could check the response_url first and inform slack
-        // of that error here and pass it into the method
-        processKarmaCommand(req, content: content)
-            .catch {
-                self.log.error("Failed to respond to Slack slash command \($0)")
-            }
+        // Do this in the background
+        processKarmaCommand(req, content: content, responseUrl: responseUrl)
 
         // Respond immediately
         return req.response().encode(status: .ok, for: req)
     }
 
-    private func processKarmaCommand(_ req: Request, content: Command) -> Future<Response> {
-        guard let responseUrl = content.response_url else {
-            return req.future(error: Abort(.badRequest))
-        }
-
+    private func processKarmaCommand(_ req: Request, content: Command, responseUrl: String) {
         let userIds = karmaParser.usersFrom(message: content.text ?? "")
 
-        return karmaRepository.find(ids: userIds)
-            .flatMap { karma in
-                // TODO: Empty karma should get a simple "couldn't find x" or something
+        karmaRepository.find(ids: userIds)
+            .flatMap { karma -> Future<Response> in
+                guard !karma.isEmpty else {
+                    return try req.client().post(responseUrl) { beforePost in
+                        let message = SimpleMessage(text: "Couldn't find any karma!")
+                        try beforePost.content.encode(json: message)
+                    }
+                }
+
                 let attachments = karma.map { KarmaMessage(user: $0.id ?? "", karma: $0.karma).karmaAttachment() }
                 return try req.client().post(responseUrl) { beforePost in
                     let karmaResponse = KarmaResponse(attachments: attachments)
                     try beforePost.content.encode(json: karmaResponse)
                 }
+            }
+            .catch {
+                self.log.error("Failed to respond to Slack slash command \($0)")
             }
     }
 }
