@@ -56,7 +56,7 @@ final class KarmaController {
     }
 
     private func processKarmaCommand(_ req: Request, content: Command, responseUrl: String) {
-        let userIds = karmaParser.usersFrom(message: content.text ?? "")
+        let userIds = karmaParser.userIds(from: content.text ?? "")
 
         karmaRepository.find(ids: userIds)
             .flatMap { karma -> Future<Response> in
