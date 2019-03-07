@@ -20,7 +20,7 @@ struct KarmaAttachment: Codable {
 
 struct KarmaMessage {
     let user: String
-    let karma: Int
+    let count: Int
 }
 
 extension KarmaMessage: Equatable { }
@@ -28,20 +28,20 @@ extension KarmaMessage: Equatable { }
 extension KarmaMessage {
 
     private func messageColor() -> String {
-        return karma >= 0 ? "#36a64f" : "#E8B122"
+        return count >= 0 ? "#36a64f" : "#E8B122"
     }
 
     private func changed() -> String {
-        if karma == 5 {
+        if count == 5 {
             return "elevated"
-        } else if karma == -5 {
+        } else if count == -5 {
             return "plummeted"
         }
-        return karma >= 0 ? "increased" : "decreased"
+        return count >= 0 ? "increased" : "decreased"
     }
 
     func defaultMessage() -> String {
-        return "\(slackUser())’s karma \(changed()) by \(karma)"
+        return "\(slackUser())’s karma \(changed()) by \(count)"
     }
 
     func slackAttachment(with newKarmaTotal: Int) -> Attachment {
@@ -65,7 +65,7 @@ extension KarmaMessage {
     }
 
     private func currentCountText() -> String {
-        return "\(slackUser()) has \(karma) karma \(emojiRelation(total: karma))"
+        return "\(slackUser()) has \(count) karma \(emojiRelation(total: count))"
     }
 
     private func emojiRelation(total: Int) -> String {
@@ -119,7 +119,7 @@ extension KarmaMessage {
         return "<@\(user)>"
     }
 
-    func karmaData() -> Karma {
-        return Karma(id: user, karma: karma)
+    func statusData() -> KarmaStatus {
+        return KarmaStatus(id: user, count: count)
     }
 }

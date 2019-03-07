@@ -18,20 +18,22 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     middlewares.use(ErrorMiddleware.self) // Catches errors and converts to HTTP response
     services.register(middlewares)
 
-    services.register(SQLiteKarmaRepository.self)
+    services.register(SQLiteKarmaStatusRepository.self)
+    services.register(SQLiteKarmaSlackHistoryRepository.self)
     services.register(RoomController.self)
 
     // Configure a SQLite database
-    let sqlite = try SQLiteDatabase(storage: .file(path: "karmaDB"))
+    let karmaDB = try SQLiteDatabase(storage: .file(path: "karmaDatabase"))
 
     // Register the configured SQLite database to the database config.
     var databases = DatabasesConfig()
-    databases.add(database: sqlite, as: .sqlite)
+    databases.add(database: karmaDB, as: .sqlite)
     services.register(databases)
 
     // Configure migrations
     var migrations = MigrationConfig()
-    migrations.add(model: Karma.self, database: .sqlite)
+    migrations.add(model: KarmaStatus.self, database: .sqlite)
+    migrations.add(model: KarmaSlackHistory.self, database: .sqlite)
     services.register(migrations)
 
     services.register(OnTapController.self)
