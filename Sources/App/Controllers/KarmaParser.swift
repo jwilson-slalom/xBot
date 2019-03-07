@@ -13,7 +13,7 @@ final class KarmaParser {
                     <@([\\w]{9}) (?# capture userId)
                     (?:|[^>]+){0,1}?> (?# optionally allow for the alternate ID slack syntax)
                     [\\s]* (?# optionally find any spaces before the +'s or -'s)
-                    (\\+{2,6}|\\-{2,6}) (?# capture the +'s or -'s)
+                    (\\+{2,6}|-{2,6}) (?# capture the +'s or -'s)
                     """
 
     private static let userString = """
