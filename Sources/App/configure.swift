@@ -18,6 +18,7 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     services.register(middlewares)
 
     services.register(PostgresTodoRepository.self)
+	//services.register(SQLiteKarmaRepository.self)
 
 	let config: PostgreSQLDatabaseConfig
 	if let databaseUrl = Environment.get("DATABASE_URL"), let herokuConfig = PostgreSQLDatabaseConfig(url: databaseUrl, transport: .unverifiedTLS) {
@@ -29,6 +30,10 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
 	}
 
 	let postgres = PostgreSQLDatabase(config: config)
+    services.register(RoomController.self)
+
+    //// Configure a SQLite database
+    //let sqlite = try SQLiteDatabase(storage: .file(path: "karmaDB"))
 
     // Register the configured SQLite database to the database config.
     var databases = DatabasesConfig()
@@ -37,9 +42,14 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
 
     // Configure migrations
     var migrations = MigrationConfig()
-	migrations.add(model: Todo.self, database: .psql)
+    migrations.add(model: Karma.self, database: .psql)
     services.register(migrations)
 
-    services.register(TodoController.self)
+    services.register(OnTapController.self)
+    services.register(KarmaController.self)
+    services.register(KarmaParser.self)
     services.register(APIKeyStorage.self)
+
+    services.register(Slack.self)
+    services.register(SlackListener.self)
 }
