@@ -1,46 +1,22 @@
+//
+//  KarmaController+Slack.swift
+//  App
+//
+//  Created by Jacob Wilson on 3/7/19.
+//
+
 import Vapor
 
-/// Controls basic CRUD operations on `Karma`s.
-final class KarmaController {
-
-    private let karmaRepository: KarmaRepository
-    private let karmaParser = KarmaParser()
-    private let slack: Slack
-    private let log: Logger
-
-    init(karmaRepository: KarmaRepository,
-         slack: Slack,
-         log: Logger) {
-
-        self.karmaRepository = karmaRepository
-        self.slack = slack
-        self.log = log
-    }
-
-    /// Returns a list of all `Karma`s.
-    func all(_ req: Request) throws -> Future<[Karma]> {
-        return karmaRepository.all()
+extension KarmaController {
+    func registerSlackRoutes(on router: Router) {
+        router.post("command", use: command)
+        router.post(Command.self, at: "command/karma", use: karmaCommand)
     }
 
     func command(_ req: Request) throws -> Future<Response> {
         return try req.content.decode(Command.self).flatMap { _ in
             try Leaderboard(text: "leaderboard").encode(for: req)
         }
-    }
-
-    /// Saves a decoded `Karma` to the database.
-    func create(_ req: Request, content: Karma) throws -> Future<Karma> {
-        return karmaRepository.save(karma: content)
-    }
-
-    /// Saves a decoded `Karma` to the database.
-    func update(_ req: Request, content: Karma) throws -> Future<Karma> {
-        return karmaRepository.save(karma: content)
-    }
-
-    func find(_ req: Request) throws -> Future<Karma> {
-        let id = try req.parameters.next(String.self)
-        return karmaRepository.find(id: id).unwrap(or: Abort(.notFound))
     }
 
     func karmaCommand(_ req: Request, content: Command) throws -> Future<Response> {
@@ -58,7 +34,7 @@ final class KarmaController {
     private func processKarmaCommand(_ req: Request, content: Command, responseUrl: String) {
         let userIds = karmaParser.userIds(from: content.text ?? "")
 
-        karmaRepository.find(ids: userIds)
+        karmaStatusRepository.find(ids: userIds)
             .flatMap { karma -> Future<Response> in
                 guard !karma.isEmpty else {
                     return try req.client().post(responseUrl) { beforePost in
@@ -67,7 +43,7 @@ final class KarmaController {
                     }
                 }
 
-                let attachments = karma.map { KarmaMessage(user: $0.id ?? "", karma: $0.karma).karmaAttachment() }
+                let attachments = karma.map { KarmaMessage(user: $0.id ?? "", karma: $0.count).karmaAttachment() }
                 return try req.client().post(responseUrl) { beforePost in
                     let karmaResponse = KarmaResponse(attachments: attachments)
                     try beforePost.content.encode(json: karmaResponse)
@@ -75,31 +51,7 @@ final class KarmaController {
             }
             .catch {
                 self.log.error("Failed to respond to Slack slash command \($0)")
-            }
-    }
-}
-
-extension KarmaController: RouteCollection {
-    func boot(router: Router) throws {
-        router.get("karma", use: all)
-        router.post(Karma.self, at:"karma", use: create)
-        router.put(Karma.self, at:"karma", use: update)
-        router.get("karma", String.parameter, use: find)
-        router.post("command", use: command)
-        router.post(Command.self, at: "command/karma", use: karmaCommand)
-    }
-}
-
-extension KarmaController: ServiceType {
-    static func makeService(for container: Container) throws -> KarmaController {
-        let slack = try container.make(Slack.self)
-        let karmaController = KarmaController(karmaRepository: try container.make(KarmaRepository.self),
-                                              slack: slack,
-                                              log: try container.make(Logger.self))
-
-        slack.register(responder: karmaController, on: container)
-
-        return karmaController
+        }
     }
 }
 
@@ -112,7 +64,7 @@ extension KarmaController: SlackResponder {
 
         try karmaMessages.forEach { karmaMessage in
             let slack = self.slack
-            let repository = self.karmaRepository
+            let statusRepository = self.karmaStatusRepository
             let log = self.log
 
             guard karmaMessage.user != sendingUser else {
@@ -122,23 +74,23 @@ extension KarmaController: SlackResponder {
             }
 
             // Update karma
-            karmaRepository.find(id: karmaMessage.user)
+            statusRepository.find(id: karmaMessage.user)
                 .unwrap(or: Abort(.notFound))
                 .flatMap { storedKarma in
-                    storedKarma.karma += karmaMessage.karma
-                    return repository.save(karma: storedKarma)
+                    storedKarma.count += karmaMessage.karma
+                    return statusRepository.save(karma: storedKarma)
                 }.catchFlatMap { _ in
-                    repository.save(karma: karmaMessage.karmaData())
+                    statusRepository.save(karma: karmaMessage.statusData())
                 }.thenThrowing { karma -> Void in
                     let response = message.response(with: karmaMessage.slackUser(),
-                                                    attachments: [karmaMessage.slackAttachment(with: karma.karma)])
+                                                    attachments: [karmaMessage.slackAttachment(with: karma.count)])
                     try slack.send(message: response)
                 }.catchMap { error in
                     let errorMessage = "Something went wrong. Please try again"
                     try slack.send(message: message.response(with: errorMessage), onlyVisibleTo: sendingUser)
                 }.catch {
                     log.error("Completely unhandled Karma error occurred. This is bad, so bad: \($0)")
-                }
+            }
         }
     }
 }
