@@ -11,6 +11,10 @@ import SlackKit
 // https://api.slack.com/messaging/sending#threading
 // https://api.slack.com/methods/chat.postMessage
 
+struct SimpleMessage: Codable {
+    let text: String
+}
+
 /// Represents a message from Slack. We could very easily create different types for
 /// incoming and outgoing messages to avoid having optional properties
 class Message {

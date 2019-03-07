@@ -8,6 +8,16 @@
 import Foundation
 import SlackKit
 
+struct KarmaResponse: Codable {
+    let attachments: [KarmaAttachment]
+}
+
+struct KarmaAttachment: Codable {
+    let fallback: String
+    let color: String
+    let text: String
+}
+
 struct KarmaMessage {
     let user: String
     let karma: Int
@@ -31,7 +41,7 @@ extension KarmaMessage {
     }
 
     func defaultMessage() -> String {
-        return "\(user)’s karma \(changed()) by \(karma)"
+        return "\(slackUser())’s karma \(changed()) by \(karma)"
     }
 
     func slackAttachment(with newKarmaTotal: Int) -> Attachment {
@@ -40,6 +50,22 @@ extension KarmaMessage {
             "color": messageColor(),
 //            "pretext": user,
             "text": "Karma \(changed()) to \(newKarmaTotal) \(emojiRelation(total: newKarmaTotal))"])
+    }
+
+    func slackAttachment() -> Attachment {
+        return Attachment(attachment: ["fallback": defaultMessage(),
+                                       "color": messageColor(),
+                                       "text": currentCountText()])
+    }
+
+    func karmaAttachment() -> KarmaAttachment {
+        return KarmaAttachment(fallback: defaultMessage(),
+                               color: messageColor(),
+                               text: currentCountText())
+    }
+
+    private func currentCountText() -> String {
+        return "\(slackUser()) has \(karma) karma \(emojiRelation(total: karma))"
     }
 
     private func emojiRelation(total: Int) -> String {

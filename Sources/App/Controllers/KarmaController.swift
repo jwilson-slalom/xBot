@@ -42,6 +42,41 @@ final class KarmaController {
         let id = try req.parameters.next(String.self)
         return karmaRepository.find(id: id).unwrap(or: Abort(.notFound))
     }
+
+    func karmaCommand(_ req: Request, content: Command) throws -> Future<Response> {
+        guard let responseUrl = content.response_url else {
+            return req.future(error: Abort(.badRequest))
+        }
+
+        // Do this in the background
+        processKarmaCommand(req, content: content, responseUrl: responseUrl)
+
+        // Respond immediately
+        return req.response().encode(status: .ok, for: req)
+    }
+
+    private func processKarmaCommand(_ req: Request, content: Command, responseUrl: String) {
+        let userIds = karmaParser.usersFrom(message: content.text ?? "")
+
+        karmaRepository.find(ids: userIds)
+            .flatMap { karma -> Future<Response> in
+                guard !karma.isEmpty else {
+                    return try req.client().post(responseUrl) { beforePost in
+                        let message = SimpleMessage(text: "Couldn't find any karma!")
+                        try beforePost.content.encode(json: message)
+                    }
+                }
+
+                let attachments = karma.map { KarmaMessage(user: $0.id ?? "", karma: $0.karma).karmaAttachment() }
+                return try req.client().post(responseUrl) { beforePost in
+                    let karmaResponse = KarmaResponse(attachments: attachments)
+                    try beforePost.content.encode(json: karmaResponse)
+                }
+            }
+            .catch {
+                self.log.error("Failed to respond to Slack slash command \($0)")
+            }
+    }
 }
 
 extension KarmaController: RouteCollection {
@@ -50,8 +85,8 @@ extension KarmaController: RouteCollection {
         router.post(Karma.self, at:"karma", use: create)
         router.put(Karma.self, at:"karma", use: update)
         router.get("karma", String.parameter, use: find)
-//        router.post(Command.self, at: "command", use: command)
         router.post("command", use: command)
+        router.post(Command.self, at: "command/karma", use: karmaCommand)
     }
 }
 
