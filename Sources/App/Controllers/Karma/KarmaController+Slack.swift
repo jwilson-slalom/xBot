@@ -43,7 +43,7 @@ extension KarmaController {
                     }
                 }
 
-                let attachments = karma.map { KarmaMessage(user: $0.id ?? "", karma: $0.count).karmaAttachment() }
+                let attachments = karma.map { KarmaMessage(user: $0.id ?? "", count: $0.count).karmaAttachment() }
                 return try req.client().post(responseUrl) { beforePost in
                     let karmaResponse = KarmaResponse(attachments: attachments)
                     try beforePost.content.encode(json: karmaResponse)
@@ -65,6 +65,7 @@ extension KarmaController: SlackResponder {
         try karmaMessages.forEach { karmaMessage in
             let slack = self.slack
             let statusRepository = self.karmaStatusRepository
+            let historyRepository = self.karmaHistoryRepository
             let log = self.log
 
             guard karmaMessage.user != sendingUser else {
@@ -73,11 +74,18 @@ extension KarmaController: SlackResponder {
                 return
             }
 
+            // Save history record
+            let karmaHistory = KarmaSlackHistory(karmaCount: karmaMessage.count, fromUser: sendingUser, karmaReceiver: karmaMessage.user, channel: message.channelID.id)
+            historyRepository.save(history: karmaHistory)
+                .catch {
+                    log.error("Could not save history \($0)")
+                }
+
             // Update karma
             statusRepository.find(id: karmaMessage.user)
                 .unwrap(or: Abort(.notFound))
                 .flatMap { storedKarma in
-                    storedKarma.count += karmaMessage.karma
+                    storedKarma.count += karmaMessage.count
                     return statusRepository.save(karma: storedKarma)
                 }.catchFlatMap { _ in
                     statusRepository.save(karma: karmaMessage.statusData())
@@ -90,7 +98,7 @@ extension KarmaController: SlackResponder {
                     try slack.send(message: message.response(with: errorMessage), onlyVisibleTo: sendingUser)
                 }.catch {
                     log.error("Completely unhandled Karma error occurred. This is bad, so bad: \($0)")
-            }
+                }
         }
     }
 }

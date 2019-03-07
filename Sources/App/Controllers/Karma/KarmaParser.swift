@@ -50,7 +50,7 @@ final class KarmaParser {
             karma = (groups[1].count - 1) * -1
         }
 
-        return KarmaMessage(user: userId, karma: karma)
+        return KarmaMessage(user: userId, count: karma)
     }
 }
 

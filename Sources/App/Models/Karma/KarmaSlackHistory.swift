@@ -18,8 +18,8 @@ final class KarmaSlackHistory: SQLiteModel {
     var karmaReceiver: String
     var channel: String
 
-    init(id: Int?,
-         karmaCount: Int = 0,
+    init(id: Int? = nil,
+         karmaCount: Int,
          fromUser: String,
          karmaReceiver: String,
          channel: String) {
