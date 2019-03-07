@@ -25,7 +25,7 @@ final class KarmaParser {
     let karmaRegex = try! NSRegularExpression(pattern: karmaString, options: .allowCommentsAndWhitespace)
     let userRegex = try! NSRegularExpression(pattern: userString, options: .allowCommentsAndWhitespace)
 
-    func karmaMessages(from message: String) -> [KarmaMessage] {
+    func receivedKarma(from message: String) -> [ReceivedKarma] {
         return karmaRegex.matches(in: message, range: NSRange(message.startIndex..<message.endIndex, in: message)).map { match in
             return process(match: match, on: message)
         }
@@ -38,7 +38,7 @@ final class KarmaParser {
         }
     }
 
-    private func process(match: NSTextCheckingResult, on message: String) -> KarmaMessage {
+    private func process(match: NSTextCheckingResult, on message: String) -> ReceivedKarma {
         let groups = match.captureGroups(testedString: message)
 
         let userId = groups[0]
@@ -50,7 +50,7 @@ final class KarmaParser {
             karma = (groups[1].count - 1) * -1
         }
 
-        return KarmaMessage(user: userId, count: karma)
+        return ReceivedKarma(user: userId, count: karma)
     }
 }
 

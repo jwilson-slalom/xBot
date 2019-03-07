@@ -77,11 +77,11 @@ final class SlackListener: ServiceType {
 
         let targets = responders.values.compactMap { $0.first }.filter { $0.0.eventTypes.contains(type) }
 
-        if type == .message, let message = Message(event: event) {
+        if type == .message, let message = SlackKitIncomingMessage(event: event) {
 
             targets.forEach { responder, worker in
                 worker.eventLoop.submit {
-                    try responder.handle(message: message)
+                    try responder.handle(incomingMessage: message)
                 }.catch { error in
                     self.log.error("Slack responder threw an error: \(error)")
                 }

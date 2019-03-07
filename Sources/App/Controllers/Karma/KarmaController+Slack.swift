@@ -43,9 +43,8 @@ extension KarmaController {
                     }
                 }
 
-                let attachments = karma.map { KarmaMessage(user: $0.id ?? "", count: $0.count).karmaAttachment() }
                 return try req.client().post(responseUrl) { beforePost in
-                    let karmaResponse = KarmaResponse(attachments: attachments)
+                    let karmaResponse = KarmaStatusResponse(forSlashCommandWithKarmaStatuses: karma)
                     try beforePost.content.encode(json: karmaResponse)
                 }
             }
@@ -57,48 +56,57 @@ extension KarmaController {
 
 extension KarmaController: SlackResponder {
 
-    func handle(message: Message) throws {
-        guard let sendingUser = message.sender else { return }
+    func handle(incomingMessage: SlackKitIncomingMessage) throws {
 
-        let karmaMessages = karmaParser.karmaMessages(from: message.text)
+        let karmaChanges = karmaParser.receivedKarma(from: incomingMessage.text)
 
-        try karmaMessages.forEach { karmaMessage in
+        try karmaChanges.forEach { change in
             let slack = self.slack
             let statusRepository = self.karmaStatusRepository
             let historyRepository = self.karmaHistoryRepository
             let log = self.log
 
-            guard karmaMessage.user != sendingUser else {
+            guard change.user != incomingMessage.sender else {
                 let errorMessage = "You can't adjust karma for yourself! "
-                try slack.send(message: message.response(with: errorMessage), onlyVisibleTo: sendingUser)
+                try slack.send(message: SlackKitResponse(inResponseTo: incomingMessage, text: errorMessage), onlyVisibleTo: incomingMessage.sender)
                 return
             }
 
             // Save history record
-            let karmaHistory = KarmaSlackHistory(karmaCount: karmaMessage.count, fromUser: sendingUser, karmaReceiver: karmaMessage.user, channel: message.channelID.id)
+            let karmaHistory = KarmaSlackHistory(karmaCount: change.count, fromUser: incomingMessage.sender, karmaReceiver: change.user, channel: incomingMessage.channelID.id)
             historyRepository.save(history: karmaHistory)
                 .catch {
                     log.error("Could not save history \($0)")
                 }
 
             // Update karma
-            statusRepository.find(id: karmaMessage.user)
+            statusRepository.find(id: change.user)
                 .unwrap(or: Abort(.notFound))
                 .flatMap { storedKarma in
-                    storedKarma.count += karmaMessage.count
+                    storedKarma.count += change.count
                     return statusRepository.save(karma: storedKarma)
                 }.catchFlatMap { _ in
-                    statusRepository.save(karma: karmaMessage.statusData())
-                }.thenThrowing { karma -> Void in
-                    let response = message.response(with: karmaMessage.slackUser(),
-                                                    attachments: [karmaMessage.slackAttachment(with: karma.count)])
+                    statusRepository.save(karma: change.karmaData())
+                }.thenThrowing { updatedKarma -> Void in
+                    let response = KarmaStatusResponse(karmaGivingMessage: incomingMessage, receivedKarma: change, karmaStatus: updatedKarma)
                     try slack.send(message: response)
                 }.catchMap { error in
                     let errorMessage = "Something went wrong. Please try again"
-                    try slack.send(message: message.response(with: errorMessage), onlyVisibleTo: sendingUser)
+                    try slack.send(message: SlackKitResponse(inResponseTo: incomingMessage, text: errorMessage), onlyVisibleTo: incomingMessage.sender)
                 }.catch {
                     log.error("Completely unhandled Karma error occurred. This is bad, so bad: \($0)")
                 }
         }
+    }
+}
+
+extension String {
+
+    func slackMention() -> String {
+        if self.hasPrefix("<@") {
+            return self
+        }
+
+        return "<@\(self)>"
     }
 }

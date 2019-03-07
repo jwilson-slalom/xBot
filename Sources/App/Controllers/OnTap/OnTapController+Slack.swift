@@ -9,21 +9,21 @@ import Foundation
 
 extension OnTapController: SlackResponder {
 
-    func handle(message: Message) throws {
+    func handle(incomingMessage: SlackKitIncomingMessage) throws {
         guard let botUser = slack.botUser else { return }
-        guard let directedTo = message.text.userIDMentionedBeforeAnyOtherContent() else { return }
+        guard let directedTo = incomingMessage.text.userIDMentionedBeforeAnyOtherContent() else { return }
         guard botUser.id == directedTo else { return }
 
         // Keyword response
-        guard message.text.contains("beer") || message.text.contains("tap") else { return }
+        guard incomingMessage.text.contains("beer") || incomingMessage.text.contains("tap") else { return }
 
-        try slack.send(message: OnTapMessage(respondingTo: message, kegSystem: OnTapMemory.kegSystem))
+        try slack.send(message: OnTapMessage(respondingTo: incomingMessage, kegSystem: OnTapMemory.kegSystem))
     }
 
     func notifySlackOfNewBeer(_ beer: Beer?, on tap: Tap) throws {
         guard let beer = beer else { return } // No message for when a tap goes offline, I don't think anyone cares
 
-        try slack.send(message: OnTapMessage(newBeer: beer, tap: tap))
+        try slack.send(message: OnTapNewBeerMessage(newBeer: beer, tap: tap))
     }
 }
 

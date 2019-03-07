@@ -7,32 +7,10 @@
 
 import SlackKit
 
-class OnTapMessage: Message {
+class OnTapMessage: SlackKitResponse {
 
-    convenience init(respondingTo incomingMessage: Message, kegSystem: KegSystem) {
-        self.init(text: "", channelID: incomingMessage.channelID, parent: incomingMessage.parent)
-
-        attachments = OnTapMessage.kegStatusAttachments(with: kegSystem)
-    }
-
-    convenience init(newBeer beer: Beer, tap: Tap) {
-        self.init(text: "", channelID: .onTapNewBeerNotificationDestination)
-
-        attachments = [OnTapMessage.newBeerAttachment(for: tap, with: beer)]
-    }
-
-    private static func newBeerAttachment(for tap: Tap, with beer: Beer) -> Attachment {
-
-        let fallback = "🍻 \(beer.name) from \(beer.breweryName) is now on tap in the Capacitor Café"
-        let text = "🍻 <\(beer.untappdURL.absoluteString)|*\(beer.name)*> from _\(beer.breweryName)_ is now on tap in the Capacitor Café"
-
-        let attachment: [String: Any] = [
-            "fallback": fallback,
-            "color": "#00ffff",
-            "mrkdwn_in": ["text"],
-            "text": text
-        ]
-        return Attachment(attachment: attachment)
+    init(respondingTo incomingMessage: SlackKitIncomingMessage, kegSystem: KegSystem) {
+        super.init(inResponseTo: incomingMessage, attachments: OnTapMessage.kegStatusAttachments(with: kegSystem))
     }
 
     private static func kegStatusAttachments(with kegSystem: KegSystem) -> [Attachment] {
@@ -78,5 +56,28 @@ class OnTapMessage: Message {
         ]
 
         return [Attachment(attachment: attachment)]
+    }
+}
+
+class OnTapNewBeerMessage: SlackKitMessage {
+
+    convenience init(newBeer beer: Beer, tap: Tap) {
+        self.init(text: "", channelID: .onTapNewBeerNotificationDestination)
+
+        attachments = [OnTapNewBeerMessage.newBeerAttachment(for: tap, with: beer)]
+    }
+
+    private static func newBeerAttachment(for tap: Tap, with beer: Beer) -> Attachment {
+
+        let fallback = "🍻 \(beer.name) from \(beer.breweryName) is now on tap in the Capacitor Café"
+        let text = "🍻 <\(beer.untappdURL.absoluteString)|*\(beer.name)*> from _\(beer.breweryName)_ is now on tap in the Capacitor Café"
+
+        let attachment: [String: Any] = [
+            "fallback": fallback,
+            "color": "#00ffff",
+            "mrkdwn_in": ["text"],
+            "text": text
+        ]
+        return Attachment(attachment: attachment)
     }
 }
