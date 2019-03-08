@@ -89,7 +89,7 @@ extension KarmaController: SlackResponder {
                 }.thenThrowing { updatedStatus -> Void in
                     try slack.send(message: KarmaStatusResponse(forKarmaAdjustingMessage: incomingMessage, receivedKarma: change, statusAfterChange: updatedStatus))
                 }.catchMap { error in
-                    let errorMessage = "Something went wrong. Please try again \(error)"
+                    let errorMessage = "Something went wrong. Please try again"
                     try slack.send(message: SlackKitResponse(to: incomingMessage, text: errorMessage), onlyVisibleTo: incomingMessage.sender)
                 }.catch {
                     log.error("Completely unhandled Karma error occurred. This is bad, so bad: \($0)")
