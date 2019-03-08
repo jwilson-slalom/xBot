@@ -6,11 +6,11 @@
 //
 
 import Foundation
-import FluentSQLite
+import FluentPostgreSQL
 import Vapor
 
 /// Captures a karma interaction from Slack
-final class KarmaSlackHistory: SQLiteModel {
+final class KarmaSlackHistory: PostgreSQLModel {
     var id: Int?
 
     var karmaCount: Int

@@ -4,7 +4,6 @@ import Vapor
 /// Called before your application initializes.
 public func configure(_ config: inout Config, _ env: inout Environment, _ services: inout Services) throws {
 	try services.register(FluentPostgreSQLProvider())
-	try services.register(SlackKitProvider())
 
     services.register(Router.self) { container -> EngineRouter in
         let router = EngineRouter.default()
@@ -17,47 +16,32 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     middlewares.use(ErrorMiddleware.self) // Catches errors and converts to HTTP response
     services.register(middlewares)
 
-    //services.register(PostgresTodoRepository.self)
-	//services.register(SQLiteKarmaRepository.self)
-
 	let config: PostgreSQLDatabaseConfig
 	if let databaseUrl = Environment.get("DATABASE_URL"), let herokuConfig = PostgreSQLDatabaseConfig(url: databaseUrl, transport: .unverifiedTLS) {
 		config = herokuConfig
-		print("Using Heroku PostgreSQL Config")
+		//print("Using Heroku PostgreSQL Config")
 	} else {
-		print("Using Local PostgreSQL Config")
+		//print("Using Local PostgreSQL Config")
 		config = PostgreSQLDatabaseConfig(hostname: "localhost", port: 5432, username: "postgres", database: "xbot", password: nil, transport: .cleartext)
 	}
 
 	let postgres = PostgreSQLDatabase(config: config)
 
-    //// Configure a SQLite database
-    //let sqlite = try SQLiteDatabase(storage: .file(path: "karmaDB"))
-
-    // Register the configured SQLite database to the database config.
+    // Register the configured PostgreSQL database to the database config.
     var databases = DatabasesConfig()
 	databases.add(database: postgres, as: .psql)
 
-    services.register(SQLiteKarmaStatusRepository.self)
-    services.register(SQLiteKarmaSlackHistoryRepository.self)
+    services.register(PostgresKarmaStatusRepository.self)
+    services.register(PostgresKarmaSlackHistoryRepository.self)
     services.register(RoomController.self)
-
-    // Configure a SQLite database
-    let karmaDB = try SQLiteDatabase(storage: .file(path: "karmaDatabase"))
-
-    // Register the configured SQLite database to the database config.
-    var databases = DatabasesConfig()
-    databases.add(database: karmaDB, as: .sqlite)
 
     services.register(databases)
 
     // Configure migrations
     var migrations = MigrationConfig()
 
-    migrations.add(model: Karma.self, database: .psql)
-
-    migrations.add(model: KarmaStatus.self, database: .sqlite)
-    migrations.add(model: KarmaSlackHistory.self, database: .sqlite)
+    migrations.add(model: KarmaStatus.self, database: .psql)
+    migrations.add(model: KarmaSlackHistory.self, database: .psql)
 
     services.register(migrations)
 

@@ -6,17 +6,17 @@
 //
 
 import Foundation
-import FluentSQLite
+import FluentPostgreSQL
 import Vapor
 
 /// Associate a karma (rating) with a unique entity
-final class KarmaStatus: SQLiteStringModel {
+final class KarmaStatus: PostgreSQLStringModel {
     var id: String?
     
     var count: Int
     var type: StatusType
 
-    init(id: String?, count: Int = 0, type: StatusType = .user) {
+    init(id: String?, count: Int, type: StatusType = .user) {
         self.id = id
         self.count = count
         self.type = type
@@ -32,7 +32,7 @@ extension KarmaStatus: Content { }
 /// Allows `KarmaStatus` to be used as a dynamic parameter in route definitions.
 extension KarmaStatus: Parameter { }
 
-enum StatusType: String, Content {
+enum StatusType: String, Codable {
     case user = "USER"
     case other = "OTHER"
     // channel, etc.
