@@ -56,17 +56,20 @@ class SlackKitResponse: SlackKitMessage {
 
     /// Constructs a new message in response to this one. If this message is in a thread,
     /// the response will be in the same thread. If it is not, then the response won't be
-    init(inResponseTo incomingMessage: SlackKitIncomingMessage?, text: String? = nil, attachments: [Attachment]? = nil) {
-        super.init(text: text ?? "", channelID: incomingMessage?.channelID ?? ChannelID(id: ""), parent: incomingMessage?.parent)
+    init(to incomingMessage: SlackKitIncomingMessage?, text: String = "", attachments: [Attachment]? = nil) {
+        super.init(text: text, channelID: incomingMessage?.channelID ?? ChannelID(id: ""), parent: incomingMessage?.parent)
         attachments.map { self.attachments = $0 }
     }
 
-    /// Constructs a new message in response to this one. The response will be threaded on the original
-//    convenience init(threadResponseTo message: SlackKitIncomingMessage, with text: String? = nil, attachments: [Attachment]? = nil) {
-//        if parent != nil {
-//            self.init(responseTo: message, with: text, attachments: attachments)
-//        } else {
-//            super.init(text: text ?? "", channelID: channelID, parent: message.timestamp)
-//        }
-//    }
+    /// Constructs a new message in response to an incoming message. The response will be threaded on the incoming message
+    /// or simply a response to the incoming message if it was already threaded.
+    ///
+    /// You only need to call this if you plan to start a new thread
+    init(threadedOn incomingMessage: SlackKitIncomingMessage, text: String = "", attachments: [Attachment]? = nil) {
+        if incomingMessage.parent != nil {
+            super.init(text: text, channelID: incomingMessage.channelID, parent: incomingMessage.parent)
+        } else {
+            super.init(text: text, channelID: incomingMessage.channelID, parent: incomingMessage.timestamp)
+        }
+    }
 }

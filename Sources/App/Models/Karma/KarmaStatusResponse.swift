@@ -20,20 +20,20 @@ class KarmaStatusResponse: SlackKitResponse {
     }
 
     init(forSlashCommandWithKarmaStatuses statuses: [KarmaStatus]) {
-        super.init(inResponseTo: nil, text: "",
+        super.init(to: nil, text: "",
                    attachments: statuses.map { KarmaStatusResponse.slashCommandSlackAttachment(karmaStatus: $0) })
     }
 
-    init(karmaGivingMessage incomingMessage: SlackKitIncomingMessage, receivedKarma: ReceivedKarma, karmaStatus: KarmaStatus) {
-        super.init(inResponseTo: incomingMessage,
-                   text: receivedKarma.user.slackMention(),
+    init(forKarmaAdjustingMessage incomingMessage: SlackKitIncomingMessage, receivedKarma: KarmaAdjustment, statusAfterChange karmaStatus: KarmaStatus) {
+        super.init(to: incomingMessage,
+                   text: receivedKarma.user.asSlackUserMention(),
                    attachments: [KarmaStatusResponse.slackAttachment(with: receivedKarma, totalKarma: karmaStatus.count)])
     }
 }
 
 extension KarmaStatusResponse {
 
-    static func defaultMessage(karma: ReceivedKarma) -> String {
+    static func defaultMessage(karma: KarmaAdjustment) -> String {
         return "\(karma.user)’s karma \(changed(karma: karma)) by \(karma.count)"
     }
 
@@ -41,7 +41,7 @@ extension KarmaStatusResponse {
         return karmaCount >= 0 ? "#36a64f" : "#E8B122"
     }
 
-    private static func changed(karma: ReceivedKarma) -> String {
+    private static func changed(karma: KarmaAdjustment) -> String {
         if karma.count == 5 {
             return "elevated"
         } else if karma.count == -5 {
@@ -50,7 +50,7 @@ extension KarmaStatusResponse {
         return karma.count >= 0 ? "increased" : "decreased"
     }
 
-    static func slackAttachment(with receivedKarma: ReceivedKarma, totalKarma: Int) -> Attachment {
+    static func slackAttachment(with receivedKarma: KarmaAdjustment, totalKarma: Int) -> Attachment {
         return Attachment(attachment: ["fallback": defaultMessage(karma: receivedKarma),
                                        "color": messageColor(karmaCount: receivedKarma.count),
             "text": "Karma \(changed(karma: receivedKarma)) to \(totalKarma) \(emojiRelation(total: totalKarma))"])
@@ -63,7 +63,7 @@ extension KarmaStatusResponse {
     }
 
     private static func currentCountText(karmaStatus: KarmaStatus, fallback: Bool) -> String {
-        return "\((fallback ? karmaStatus.id : karmaStatus.id?.slackMention()) ?? "Something") has \(karmaStatus.count) karma \(emojiRelation(total: karmaStatus.count))"
+        return "\((fallback ? karmaStatus.id : karmaStatus.id?.asSlackUserMention()) ?? "Something") has \(karmaStatus.count) karma \(emojiRelation(total: karmaStatus.count))"
     }
 
     private static func emojiRelation(total: Int) -> String {

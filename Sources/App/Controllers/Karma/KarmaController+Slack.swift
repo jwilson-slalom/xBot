@@ -34,7 +34,8 @@ extension KarmaController {
     private func processKarmaCommand(_ req: Request, content: Command, responseUrl: String) {
         let userIds = karmaParser.userIds(from: content.text ?? "")
 
-        karmaStatusRepository.find(ids: userIds)
+        karmaStatusRepository
+            .find(ids: userIds)
             .flatMap { karma -> Future<Response> in
                 guard !karma.isEmpty else {
                     return try req.client().post(responseUrl) { beforePost in
@@ -50,7 +51,7 @@ extension KarmaController {
             }
             .catch {
                 self.log.error("Failed to respond to Slack slash command \($0)")
-        }
+            }
     }
 }
 
@@ -58,55 +59,44 @@ extension KarmaController: SlackResponder {
 
     func handle(incomingMessage: SlackKitIncomingMessage) throws {
 
-        let karmaChanges = karmaParser.receivedKarma(from: incomingMessage.text)
+        let karmaChanges = karmaParser.karmaAdjustments(from: incomingMessage.text)
+
+        let slack = self.slack
+        let statusRepository = self.karmaStatusRepository
+        let historyRepository = self.karmaHistoryRepository
+        let log = self.log
 
         try karmaChanges.forEach { change in
-            let slack = self.slack
-            let statusRepository = self.karmaStatusRepository
-            let historyRepository = self.karmaHistoryRepository
-            let log = self.log
 
             guard change.user != incomingMessage.sender else {
                 let errorMessage = "You can't adjust karma for yourself! "
-                try slack.send(message: SlackKitResponse(inResponseTo: incomingMessage, text: errorMessage), onlyVisibleTo: incomingMessage.sender)
+                try slack.send(message: SlackKitResponse(to: incomingMessage, text: errorMessage), onlyVisibleTo: incomingMessage.sender)
                 return
             }
 
             // Save history record
             let karmaHistory = KarmaSlackHistory(karmaCount: change.count, fromUser: incomingMessage.sender, karmaReceiver: change.user, channel: incomingMessage.channelID.id)
-            historyRepository.save(history: karmaHistory)
+            historyRepository
+                .save(history: karmaHistory)
                 .catch {
                     log.error("Could not save history \($0)")
                 }
 
             // Update karma
-            statusRepository.find(id: change.user)
-                .unwrap(or: Abort(.notFound))
-                .flatMap { storedKarma in
-                    storedKarma.count += change.count
-                    return statusRepository.save(karma: storedKarma)
-                }.catchFlatMap { _ in
-                    statusRepository.save(karma: change.karmaData())
-                }.thenThrowing { updatedKarma -> Void in
-                    let response = KarmaStatusResponse(karmaGivingMessage: incomingMessage, receivedKarma: change, karmaStatus: updatedKarma)
-                    try slack.send(message: response)
+            statusRepository
+                .find(id: change.user)
+                .flatMap {
+                    let karmaStatus = $0 ?? KarmaStatus(id: change.user, count: 0)
+                    karmaStatus.count += change.count
+                    return statusRepository.save(karma: karmaStatus)
+                }.thenThrowing { updatedStatus -> Void in
+                    try slack.send(message: KarmaStatusResponse(forKarmaAdjustingMessage: incomingMessage, receivedKarma: change, statusAfterChange: updatedStatus))
                 }.catchMap { error in
                     let errorMessage = "Something went wrong. Please try again"
-                    try slack.send(message: SlackKitResponse(inResponseTo: incomingMessage, text: errorMessage), onlyVisibleTo: incomingMessage.sender)
+                    try slack.send(message: SlackKitResponse(to: incomingMessage, text: errorMessage), onlyVisibleTo: incomingMessage.sender)
                 }.catch {
                     log.error("Completely unhandled Karma error occurred. This is bad, so bad: \($0)")
                 }
         }
-    }
-}
-
-extension String {
-
-    func slackMention() -> String {
-        if self.hasPrefix("<@") {
-            return self
-        }
-
-        return "<@\(self)>"
     }
 }

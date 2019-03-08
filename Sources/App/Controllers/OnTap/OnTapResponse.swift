@@ -7,10 +7,10 @@
 
 import SlackKit
 
-class OnTapMessage: SlackKitResponse {
+class OnTapResponse: SlackKitResponse {
 
-    init(respondingTo incomingMessage: SlackKitIncomingMessage, kegSystem: KegSystem) {
-        super.init(inResponseTo: incomingMessage, attachments: OnTapMessage.kegStatusAttachments(with: kegSystem))
+    init(to incomingMessage: SlackKitIncomingMessage, kegSystem: KegSystem) {
+        super.init(to: incomingMessage, attachments: OnTapResponse.kegStatusAttachments(with: kegSystem))
     }
 
     private static func kegStatusAttachments(with kegSystem: KegSystem) -> [Attachment] {
@@ -39,7 +39,7 @@ class OnTapMessage: SlackKitResponse {
         let attachment: [String: Any] = [
             "fallback": fallbackText,
             "color": "00FFFF",
-            "pretext": "Here's what's _onTap! 🍻",
+            "pretext": "Here's what's _onTap! 🍻 <#\(ChannelID.onTapNewBeerNotificationDestination.id)>",
             "mrkdwn_in": ["fields"],
             "fields": [
                 [

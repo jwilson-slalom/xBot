@@ -17,7 +17,7 @@ extension OnTapController: SlackResponder {
         // Keyword response
         guard incomingMessage.text.contains("beer") || incomingMessage.text.contains("tap") else { return }
 
-        try slack.send(message: OnTapMessage(respondingTo: incomingMessage, kegSystem: OnTapMemory.kegSystem))
+        try slack.send(message: OnTapResponse(to: incomingMessage, kegSystem: OnTapMemory.kegSystem))
     }
 
     func notifySlackOfNewBeer(_ beer: Beer?, on tap: Tap) throws {
