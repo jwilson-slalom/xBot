@@ -11,57 +11,65 @@ import SlackKit
 // https://api.slack.com/messaging/sending#threading
 // https://api.slack.com/methods/chat.postMessage
 
-struct SimpleMessage: Codable {
+class SimpleMessage: Encodable {
     let text: String
+    var attachments: [Attachment]?
+
+    init(text: String, attachments: [Attachment]? = nil) {
+        self.text = text
+        self.attachments = attachments
+    }
 }
 
 /// Represents a message from Slack. We could very easily create different types for
 /// incoming and outgoing messages to avoid having optional properties
-class Message {
-    let text: String
+class SlackKitMessage: SimpleMessage, SlackKitSendable {
     let channelID: ChannelID
     let parent: String?
 
-    // I don't know that it makes sense to receive these?
-    var attachments = [Attachment]()
-
-    // Sender is only really useful for messages we've received
-    var sender: String?
-    var timestamp: String?
-
     init(text: String, channelID: ChannelID, parent: String? = nil) {
-        self.text = text
         self.channelID = channelID
         self.parent = parent
-    }
 
-    public convenience init?(event: Event) {
+        super.init(text: text)
+    }
+}
+
+class SlackKitIncomingMessage: SlackKitMessage {
+    let sender: String
+    let timestamp: String
+
+    public init?(event: Event) {
         guard let messageText = event.message?.text else { return nil }
         guard let channelID = event.channel?.id else { return nil }
+        guard let sender = event.user?.id else { return nil }
+        guard let timestamp = event.message?.ts else { return nil }
 
-        self.init(text: messageText, channelID: .init(id: channelID), parent: event.message?.threadTs)
+        self.sender = sender
+        self.timestamp = timestamp
 
-        sender = event.user?.id
-        timestamp = event.message?.ts
+        super.init(text: messageText, channelID: .init(id: channelID), parent: event.message?.threadTs)
     }
+}
+
+class SlackKitResponse: SlackKitMessage {
 
     /// Constructs a new message in response to this one. If this message is in a thread,
     /// the response will be in the same thread. If it is not, then the response won't be
-    func response(with text: String? = nil, attachments: [Attachment]? = nil) -> Message {
-        let response = Message(text: text ?? "", channelID: channelID, parent: parent)
-        attachments.map { response.attachments = $0 }
-        return response
+    init(to incomingMessage: SlackKitIncomingMessage?, text: String = "", attachments: [Attachment]? = nil) {
+        super.init(text: text, channelID: incomingMessage?.channelID ?? ChannelID(id: ""), parent: incomingMessage?.parent)
+        attachments.map { self.attachments = $0 }
     }
 
-    /// Constructs a new message in response to this one. The response will be threaded on the original
-    func threadedResponse(with text: String? = nil, attachments: [Attachment]? = nil) -> Message {
-        if parent != nil {
-            return self.response(with: text, attachments: attachments)
+    /// Constructs a new message in response to an incoming message. The response will be threaded on the incoming message
+    /// or simply a response to the incoming message if it was already threaded.
+    ///
+    /// You only need to call this if you plan to start a new thread
+    init(threadedOn incomingMessage: SlackKitIncomingMessage, text: String = "", attachments: [Attachment]? = nil) {
+        if incomingMessage.parent != nil {
+            super.init(text: text, channelID: incomingMessage.channelID, parent: incomingMessage.parent)
+        } else {
+            super.init(text: text, channelID: incomingMessage.channelID, parent: incomingMessage.timestamp)
         }
-
-        // Start new thread
-        let response = Message(text: text ?? "", channelID: channelID, parent: timestamp)
-        attachments.map { response.attachments = $0 }
-        return response
     }
 }

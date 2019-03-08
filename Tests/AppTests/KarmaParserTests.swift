@@ -14,6 +14,7 @@ final class KarmaParserTests: XCTestCase {
         ("testThatItParsesOneUser_Negative", testThatItParsesOneUser_Negative),
         ("testThatItParsesMultipleUser_Positive", testThatItParsesMultipleUser_Positive),
         ("testThatItParsesMultipleUser_Negative", testThatItParsesMultipleUser_Negative),
+        ("testThatItParsesMultipleUser_PositiveAndNegative", testThatItParsesMultipleUser_PositiveAndNegative),
         ("testThatItDoesNotParsesUsers_Positive", testThatItDoesNotParsesUsers_Positive),
         ("testThatItDoesNotParsesUsers_Negative", testThatItDoesNotParsesUsers_Negative),
         ("testThatItDoesParsesUsersAndHitsMaximum_Positive", testThatItDoesParsesUsersAndHitsMaximum_Positive),
@@ -21,7 +22,7 @@ final class KarmaParserTests: XCTestCase {
     ]
 
     var testMessage: String!
-    var expectedKarmaMessages: [KarmaMessage]!
+    var expectedKarmaMessages: [KarmaAdjustment]!
 
     var parser: KarmaParser!
 
@@ -30,161 +31,158 @@ final class KarmaParserTests: XCTestCase {
     }
 
     func testThatItParsesOneUser_Positive() {
-        expectedKarmaMessages = [KarmaMessage(user: "Jacob", karma: 1)]
+        expectedKarmaMessages = [KarmaAdjustment(user: "U12345678", count: 1)]
 
-        testMessage = "<@Jacob>++"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        testMessage = "<@U12345678|jacob>++"
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
 
-        testMessage = "<@Jacob> ++"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        testMessage = "<@U12345678> ++"
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
 
-        testMessage = "   <@Jacob>  ++"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        testMessage = "   <@U12345678>  ++"
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
     }
 
     func testThatItParsesOneUser_Negative() {
-        expectedKarmaMessages = [KarmaMessage(user: "Jacob", karma: -1)]
+        expectedKarmaMessages = [KarmaAdjustment(user: "U12345678", count: -1)]
 
-        testMessage = "<@Jacob>--"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        testMessage = "<@U12345678|jacob>--"
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
 
-        testMessage = "<@Jacob> --"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        testMessage = "<@U12345678> --"
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
 
-        testMessage = " asdfa <@Jacob> --"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        testMessage = " asdfa <@U12345678> --"
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
     }
 
     func testThatItParsesMultipleUser_Positive() {
-        expectedKarmaMessages = [KarmaMessage(user: "Jacob", karma: 2),
-                                 KarmaMessage(user: "Allen", karma: 2)]
+        expectedKarmaMessages = [KarmaAdjustment(user: "U12345678", count: 2),
+                                 KarmaAdjustment(user: "U98765432", count: 2)]
 
-        testMessage = "<@Jacob> <@Allen>+++"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        testMessage = "<@U12345678>+++ <@U98765432>+++"
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
 
-        testMessage = "<@Jacob> <@Allen> +++"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        testMessage = "<@U12345678|jacob> +++ <@U98765432> +++"
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
 
-        testMessage = " sadfa <@Jacob> <@Allen>   +++"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        testMessage = " sadfa <@U12345678>+++ <@U98765432|allen>   +++"
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
 
-        expectedKarmaMessages = [KarmaMessage(user: "Ryan", karma: 2),
-                                 KarmaMessage(user: "Jacob", karma: 2),
-                                 KarmaMessage(user: "Allen", karma: 2)]
+        expectedKarmaMessages = [KarmaAdjustment(user: "URY13AN12", count: 1),
+                                 KarmaAdjustment(user: "U12345678", count: 3),
+                                 KarmaAdjustment(user: "U98765432", count: 2)]
 
-        testMessage = "<@Ryan> apples <@Jacob> <@Allen> +++"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        testMessage = "<@URY13AN12>++ apples <@U12345678>++++ <@U98765432> +++"
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
 
-        testMessage = "<@Ryan> <@Jacob> <@Allen>+++"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
-
-        expectedKarmaMessages = [KarmaMessage(user: "Jacob", karma: 1),
-                                 KarmaMessage(user: "Allen", karma: 2)]
-        testMessage = "<@Jacob>++ <@Allen>+++"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
-
-        testMessage = "asdfasd <@Jacob>++ sdfa <@Allen>+++"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        testMessage = "<@URY13AN12>++   asdf    <@U12345678>   ++++ <@U98765432> +++"
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
     }
 
     func testThatItParsesMultipleUser_Negative() {
-        expectedKarmaMessages = [KarmaMessage(user: "Jacob", karma: -2),
-                                 KarmaMessage(user: "Allen", karma: -2)]
+        expectedKarmaMessages = [KarmaAdjustment(user: "U12345678", count: -2),
+                                 KarmaAdjustment(user: "U98765432", count: -2)]
 
-        testMessage = "<@Jacob> <@Allen>---"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        testMessage = "<@U12345678>--- <@U98765432>---"
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
 
-        testMessage = "<@Jacob> <@Allen> ---"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        testMessage = "<@U12345678|jacob> --- <@U98765432> ---"
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
 
-        testMessage = " sadfa <@Jacob> <@Allen>   ---"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        testMessage = " sadfa <@U12345678>--- <@U98765432|allen>   ---"
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
 
-        expectedKarmaMessages = [KarmaMessage(user: "Ryan", karma: -2),
-                                 KarmaMessage(user: "Jacob", karma: -2),
-                                 KarmaMessage(user: "Allen", karma: -2)]
+        expectedKarmaMessages = [KarmaAdjustment(user: "URY13AN12", count: -1),
+                                 KarmaAdjustment(user: "U12345678", count: -3),
+                                 KarmaAdjustment(user: "U98765432", count: -2)]
 
-        testMessage = "<@Ryan> apples <@Jacob> <@Allen> ---"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        testMessage = "<@URY13AN12>-- apples <@U12345678>---- <@U98765432> ---"
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
 
-        testMessage = "<@Ryan> <@Jacob> <@Allen> ---"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        testMessage = "<@URY13AN12>--   asdf    <@U12345678>   ---- <@U98765432> ---"
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
+    }
 
-        expectedKarmaMessages = [KarmaMessage(user: "Jacob", karma: -2),
-                                 KarmaMessage(user: "Allen", karma: -2)]
-        testMessage = "<@R yan> <@Jacob> <@Allen> ---"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+    func testThatItParsesMultipleUser_PositiveAndNegative() {
+        expectedKarmaMessages = [KarmaAdjustment(user: "U12345678", count: -2),
+                                 KarmaAdjustment(user: "U98765432", count: 2)]
 
-        expectedKarmaMessages = [KarmaMessage(user: "Jacob", karma: -4),
-                                 KarmaMessage(user: "Allen", karma: -2)]
-        testMessage = "<@Jacob>----- <@Allen>--"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        testMessage = "<@U12345678>--- <@U98765432>+++"
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
 
-        testMessage = "asdfasd <@Jacob>----- sdfa <@Allen>--"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        testMessage = "<@U12345678|jacob> --- <@U98765432> +++"
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
+
+        testMessage = " sadfa <@U12345678>--- <@U98765432|allen>   +++"
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
+
+        expectedKarmaMessages = [KarmaAdjustment(user: "URY13AN12", count: 1),
+                                 KarmaAdjustment(user: "U12345678", count: -3),
+                                 KarmaAdjustment(user: "U98765432", count: 2)]
+
+        testMessage = "<@URY13AN12>++ apples <@U12345678>---- <@U98765432> +++"
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
+
+        testMessage = "<@URY13AN12>++   asdf    <@U12345678>   ---- <@U98765432> +++"
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
     }
 
     func testThatItDoesNotParsesUsers_Positive() {
-        expectedKarmaMessages = [KarmaMessage]()
+        expectedKarmaMessages = [KarmaAdjustment]()
 
-        testMessage = "<@Jacob> <@Allen> asdasd +++"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        testMessage = "<@U12345678> <@U98765432> asdasd +++"
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
 
         testMessage = " sadfaa +++"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
 
         testMessage = "+++"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
 
         testMessage = "test message "
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
 
-        testMessage = "<@Ryan>"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        testMessage = "<@URY13AN12>"
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
     }
 
     func testThatItDoesNotParsesUsers_Negative() {
-        expectedKarmaMessages = [KarmaMessage]()
+        expectedKarmaMessages = [KarmaAdjustment]()
 
-        testMessage = "<@Jacob> <@Allen> asdasd --"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        testMessage = "<@U12345678> <@U98765432> asdasd --"
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
 
         testMessage = " sadfaa --"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
 
         testMessage = "----"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
 
         testMessage = "test message "
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
 
-        testMessage = "<@Ryan>"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        testMessage = "<@URY13AN12>"
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
     }
 
     func testThatItDoesParsesUsersAndHitsMaximum_Positive() {
-        expectedKarmaMessages = [KarmaMessage(user: "Jacob", karma: 5)]
+        expectedKarmaMessages = [KarmaAdjustment(user: "U12345678", count: 5)]
 
-        testMessage = "<@Jacob> +++++++++++++++"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        testMessage = "<@U12345678> +++++++++++++++"
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
 
-        testMessage = "<@Jacob>++++++"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        testMessage = "<@U12345678>++++++"
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
     }
 
     func testThatItDoesParsesUsersAndHitsMaximum_Negative() {
-        expectedKarmaMessages = [KarmaMessage(user: "Jacob", karma: -5)]
+        expectedKarmaMessages = [KarmaAdjustment(user: "U12345678", count: -5)]
 
-        testMessage = "<@Jacob> ---------------"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
+        testMessage = "<@U12345678> ---------------"
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
 
-        testMessage = "<@Jacob>------"
-        compareKarmaMessages(actual: parser.karmaMessages(from: testMessage), expected: expectedKarmaMessages)
-    }
-
-    private func compareKarmaMessages(actual: [KarmaMessage], expected: [KarmaMessage]) {
-        for (index, karmaMessage) in actual.enumerated() {
-            XCTAssertEqual(karmaMessage, expected[index])
-        }
+        testMessage = "<@U12345678>------"
+        XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
     }
 }

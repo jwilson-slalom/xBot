@@ -23,13 +23,19 @@ enum Tap: String, Parameter {
 }
 
 struct Beer: Content {
-    let untappdID: Double
+    let untappdID: Int
     let name: String
     let breweryName: String
     let untappdURL: URL
     let style: String
     let abv: Double
     let ibu: Double
+}
+
+extension Beer: Equatable {
+    static func == (lhs: Beer, rhs: Beer) -> Bool {
+        return lhs.untappdID == rhs.untappdID
+    }
 }
 
 struct KegSystem: Content {
