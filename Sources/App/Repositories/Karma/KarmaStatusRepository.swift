@@ -9,7 +9,7 @@ import Vapor
 import Fluent
 import FluentPostgreSQL
 
-protocol KarmaStatusRepository: ServiceType {
+protocol KarmaStatusRepo: ServiceType {
     func all() -> Future<[KarmaStatus]>
     func save(karma: KarmaStatus) -> Future<KarmaStatus>
     func find(id: String) -> Future<KarmaStatus?>
@@ -20,7 +20,7 @@ extension Database {
     public typealias ConnectionPool = DatabaseConnectionPool<ConfiguredDatabase<Self>>
 }
 
-final class PostgresKarmaStatusRepository: KarmaStatusRepository {
+final class KarmaStatusRepository: KarmaStatusRepo {
 
     let db: PostgreSQLDatabase.ConnectionPool
 
@@ -56,10 +56,10 @@ final class PostgresKarmaStatusRepository: KarmaStatusRepository {
 }
 
 //MARK: - ServiceType conformance
-extension PostgresKarmaStatusRepository {
-    static let serviceSupports: [Any.Type] = [KarmaStatusRepository.self]
+extension KarmaStatusRepository {
+    static let serviceSupports: [Any.Type] = [KarmaStatusRepo.self]
 
-    static func makeService(for worker: Container) throws -> PostgresKarmaStatusRepository {
+    static func makeService(for worker: Container) throws -> KarmaStatusRepository {
         return .init(try worker.connectionPool(to: .psql))
     }
 }

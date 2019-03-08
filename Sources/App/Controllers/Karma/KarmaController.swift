@@ -3,15 +3,15 @@ import Vapor
 /// Controls basic CRUD operations on `Karma`s.
 final class KarmaController {
 
-    let karmaStatusRepository: KarmaStatusRepository
-    let karmaHistoryRepository: KarmaSlackHistoryRepository
+    let karmaStatusRepository: KarmaStatusRepo
+    let karmaHistoryRepository: KarmaSlackHistoryRepo
     let slack: Slack
     let log: Logger
 
     let karmaParser = KarmaParser()
 
-    init(karmaStatusRepository: KarmaStatusRepository,
-         karmaHistoryRepository: KarmaSlackHistoryRepository,
+    init(karmaStatusRepository: KarmaStatusRepo,
+         karmaHistoryRepository: KarmaSlackHistoryRepo,
          slack: Slack,
          log: Logger) {
 

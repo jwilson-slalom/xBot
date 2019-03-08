@@ -29,8 +29,8 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     var databases = DatabasesConfig()
 	databases.add(database: postgres, as: .psql)
 
-    services.register(PostgresKarmaStatusRepository.self)
-    services.register(PostgresKarmaSlackHistoryRepository.self)
+    services.register(KarmaStatusRepository.self)
+    services.register(KarmaSlackHistoryRepository.self)
     services.register(RoomController.self)
 
     services.register(databases)

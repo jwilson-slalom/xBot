@@ -9,14 +9,14 @@ import Vapor
 import Fluent
 import FluentPostgreSQL
 
-protocol KarmaSlackHistoryRepository: ServiceType {
+protocol KarmaSlackHistoryRepo: ServiceType {
     func all() -> Future<[KarmaSlackHistory]>
     func save(history: KarmaSlackHistory) -> Future<KarmaSlackHistory>
     func find(id: Int) -> Future<KarmaSlackHistory?>
     func find(ids: [Int]) -> Future<[KarmaSlackHistory]>
 }
 
-final class PostgresKarmaSlackHistoryRepository: KarmaSlackHistoryRepository {
+final class KarmaSlackHistoryRepository: KarmaSlackHistoryRepo {
 
     let db: PostgreSQLDatabase.ConnectionPool
 
@@ -52,10 +52,10 @@ final class PostgresKarmaSlackHistoryRepository: KarmaSlackHistoryRepository {
 }
 
 //MARK: - ServiceType conformance
-extension PostgresKarmaSlackHistoryRepository {
-    static let serviceSupports: [Any.Type] = [KarmaSlackHistoryRepository.self]
+extension KarmaSlackHistoryRepository {
+    static let serviceSupports: [Any.Type] = [KarmaSlackHistoryRepo.self]
 
-    static func makeService(for worker: Container) throws -> PostgresKarmaSlackHistoryRepository {
+    static func makeService(for worker: Container) throws -> KarmaSlackHistoryRepository {
         return .init(try worker.connectionPool(to: .psql))
     }
 }
