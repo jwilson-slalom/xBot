@@ -9,9 +9,9 @@ import Foundation
 
 enum OnTapMemory {
 
-    // Absolutely not threadsafe
-    fileprivate static var leftBeerChangeCount: Int64 = -1
-    fileprivate static var rightBeerChangeCount: Int64 = -1
+    // ~Absolutely~ getting closer to not entirely not threadsafe
+    fileprivate static var leftBeerSetCount: Int64 = -1
+    fileprivate static var rightBeerSetCount: Int64 = -1
 
     private static let lock = DispatchQueue(label: "responders.lock", qos: .default, attributes: .concurrent)
     static private var _kegSystem = KegSystem(leftBeer: nil, rightBeer: nil, updated: .distantPast)
@@ -24,43 +24,27 @@ enum OnTapMemory {
         var oldValue: Beer?
         switch tap {
         case .left:
+            leftBeerSetCount += 1
             oldValue = kegSystem.leftBeer
             kegSystem.leftBeer = newBeer
         case .right:
+            rightBeerSetCount += 1
             oldValue = kegSystem.rightBeer
             kegSystem.rightBeer = newBeer
         }
 
         kegSystem.updated = Date()
 
-        func different(_ oldBeer: Beer?, _ newBeer: Beer?) -> Bool {
-            switch (oldValue, newBeer) {
-            case let (old?, new?) where old.untappdID != new.untappdID:
-                fallthrough
-            case (.none, .some), (.some, .none):
-                return true
-            case (.none, .none), (.some, .some):
-                return false
-            }
+        guard oldValue != newBeer else { return false }
+
+        // Ignores the initial set after the server starts up
+        switch tap {
+        case .left where leftBeerSetCount > 0:
+            return true
+        case .right where rightBeerSetCount > 0:
+            return true
+        default:
+            return false
         }
-
-        // Ignores the initial set after the server starts
-
-        if different(oldValue, newBeer) {
-            switch tap {
-            case .left:
-                leftBeerChangeCount += 1
-                if leftBeerChangeCount > 0 {
-                    return true
-                }
-            case .right:
-                rightBeerChangeCount += 1
-                if rightBeerChangeCount > 0 {
-                    return true
-                }
-            }
-        }
-
-        return false
     }
 }
