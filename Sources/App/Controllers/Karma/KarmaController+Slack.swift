@@ -74,7 +74,7 @@ extension KarmaController: SlackResponder {
             }
 
             // Save history record
-            let karmaHistory = KarmaSlackHistory(karmaCount: change.count, fromUser: incomingMessage.sender, karmaReceiver: change.user, channel: incomingMessage.channelID.id)
+            let karmaHistory = KarmaSlackHistory(karmaCount: change.count, karmaReceiver: change.user, karmaSender: incomingMessage.sender, inChannel: incomingMessage.channelID.id)
             historyRepository
                 .save(history: karmaHistory)
                 .catch {

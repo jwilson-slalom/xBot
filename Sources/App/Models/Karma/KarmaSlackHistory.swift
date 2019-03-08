@@ -14,21 +14,21 @@ final class KarmaSlackHistory: PostgreSQLModel {
     var id: Int?
 
     var karmaCount: Int
-    var fromUser: String
     var karmaReceiver: String
-    var channel: String
+    var karmaSender: String
+    var inChannel: String
 
     init(id: Int? = nil,
          karmaCount: Int,
-         fromUser: String,
          karmaReceiver: String,
-         channel: String) {
+         karmaSender: String,
+         inChannel: String) {
 
         self.id = id
         self.karmaCount = karmaCount
-        self.fromUser = fromUser
         self.karmaReceiver = karmaReceiver
-        self.channel = channel
+        self.karmaSender = karmaSender
+        self.inChannel = inChannel
     }
 }
 
