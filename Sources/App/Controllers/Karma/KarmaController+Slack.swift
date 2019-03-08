@@ -85,9 +85,7 @@ extension KarmaController: SlackResponder {
             statusRepository
                 .find(id: change.user)
                 .flatMap {
-                    let karmaStatus = $0 ?? KarmaStatus(id: change.user, count: 0)
-                    karmaStatus.count += change.count
-                    return statusRepository.save(karma: karmaStatus)
+                    statusRepository.save(karma: KarmaStatus(id: change.user, count: ($0?.count ?? 0) + change.count))
                 }.thenThrowing { updatedStatus -> Void in
                     try slack.send(message: KarmaStatusResponse(forKarmaAdjustingMessage: incomingMessage, receivedKarma: change, statusAfterChange: updatedStatus))
                 }.catchMap { error in

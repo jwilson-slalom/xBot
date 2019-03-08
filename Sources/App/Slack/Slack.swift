@@ -63,7 +63,7 @@ struct Slack: ServiceType {
         }
     }
 
-    func send(message: SlackKitMessage, onlyVisibleTo user: String) throws {
+    func send(message: SlackKitSendable, onlyVisibleTo user: String) throws {
         guard let web = slackKit.webAPI else { throw Abort(.internalServerError) }
 
         if let _ = message.parent {
