@@ -48,8 +48,7 @@ extension KarmaController {
                     let karmaResponse = KarmaStatusResponse(forSlashCommandWithKarmaStatuses: karma)
                     try beforePost.content.encode(json: karmaResponse)
                 }
-            }
-            .catch {
+            }.catch {
                 self.log.error("Failed to respond to Slack slash command \($0)")
             }
     }

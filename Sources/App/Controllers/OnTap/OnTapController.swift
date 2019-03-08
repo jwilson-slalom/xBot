@@ -58,8 +58,8 @@ extension OnTapController: RouteCollection {
         guard let deviceID = request.http.headers.firstValue(name: .onTapDeviceIdentifier),
             deviceID == iPadDeviceID else {
 
-                log.error("Unrecognized device attempted to update tap")
-                return request.response().encode(status: .unauthorized, for: request)
+            log.error("Unrecognized device attempted to update tap")
+            return request.response().encode(status: .unauthorized, for: request)
         }
 
         let tap: Tap
@@ -70,10 +70,10 @@ extension OnTapController: RouteCollection {
             return request.response().encode(status: .badRequest, for: request)
         }
 
-        log.debug("Received \(String(describing: beer)) for tap \(tap)")
+        log.debug("Received: \(tap) tap \(beer?.name.uppercased() ?? "<nil>")")
 
         if OnTapMemory.set(beer: beer, on: tap) {
-            log.debug("Tap \(tap) changed to: \(String(describing: beer))")
+            log.debug("Changed: \(tap.rawValue.capitalized) tap to: \(beer?.name ?? "<nil>")")
 
             try notifySlackOfNewBeer(beer, on: tap)
         }
