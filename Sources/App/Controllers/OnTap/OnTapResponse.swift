@@ -39,7 +39,7 @@ class OnTapResponse: SlackKitResponse {
         let attachment: [String: Any] = [
             "fallback": fallbackText,
             "color": "00FFFF",
-            "pretext": "Here's what's _onTap! 🍻 <#\(ChannelID.onTapNewBeerNotificationDestination.id)>",
+            "pretext": "Here's what's _onTap! 🍻",
             "mrkdwn_in": ["fields"],
             "fields": [
                 [
