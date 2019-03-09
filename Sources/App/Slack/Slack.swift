@@ -18,15 +18,15 @@ struct Slack: ServiceType {
     }
 
     static func makeService(for container: Container) throws -> Slack {
-        return Slack(apiKey: try container.make(APIKeyStorage.self),
-                     listener: try container.make(SlackListener.self),
-                     logger: try container.make(Logger.self))
+        return Slack(apiKey: try container.make(),
+                     listener: try container.make(),
+                     logger: try container.make())
     }
 
-    init(apiKey: APIKeyStorage, listener: SlackListener, logger: Logger) {
+    init(apiKey: Secrets, listener: SlackListener, logger: Logger) {
         self.listener = listener
         self.log = logger
-        slackKit.addWebAPIAccessWithToken(apiKey.botUserApiKey)
+        slackKit.addWebAPIAccessWithToken(apiKey.slackAppBotUserAPI)
     }
 
     func register(responder: SlackResponder, on worker: Worker) {

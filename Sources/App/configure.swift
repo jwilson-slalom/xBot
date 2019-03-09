@@ -38,7 +38,7 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
 
     services.register(OnTapController.self)
     services.register(KarmaController.self)
-    services.register(APIKeyStorage.self)
+    services.register(try Secrets.detect())
     services.register(Slack.self)
     services.register(SlackListener.self)
 }
