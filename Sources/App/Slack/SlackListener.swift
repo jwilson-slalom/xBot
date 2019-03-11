@@ -14,7 +14,7 @@ final class SlackListener: ServiceType {
 
     private static var shared = SlackListener()
     static func makeService(for container: Container) throws -> SlackListener {
-        shared.apiKey = try container.make(Secrets.self)
+        shared.secrets = try container.make(Secrets.self)
         return shared
     }
 
@@ -25,15 +25,15 @@ final class SlackListener: ServiceType {
     private let log = ConsoleLogger(console: Terminal())
 
     public var botUser: User? {
-        return apiKey.flatMap { slackKit.clients[$0.slackAppBotUserAPI] }?.client?.authenticatedUser
+        return secrets.flatMap { slackKit.clients[$0.slackAppBotUserAPI] }?.client?.authenticatedUser
     }
 
-    public var apiKey: Secrets? {
+    public var secrets: Secrets? {
         didSet {
-            guard apiKey != oldValue else { return }
+            guard secrets != oldValue else { return }
 
-            if let apiKey = apiKey {
-                slackKit.addRTMBotWithAPIToken(apiKey.slackAppBotUserAPI, client: SimpleClient(), rtm: VaporEngineRTM())
+            if let secrets = secrets {
+                slackKit.addRTMBotWithAPIToken(secrets.slackAppBotUserAPI, client: SimpleClient(), rtm: VaporEngineRTM())
             } else if let oldKey = oldValue {
                 slackKit.clients[oldKey.slackAppBotUserAPI]?.rtm?.disconnect()
             }
