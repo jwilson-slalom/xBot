@@ -5,18 +5,19 @@
 //  Created by Allen Humphreys on 2/28/19.
 //
 
+import Crypto
 import Vapor
-
-private let iPadDeviceID = "21F17F00-A94B-4BE9-A03D-BA6A20D709FC"
 
 final class OnTapController {
 
     let slack: Slack
     let log: Logger
+    let secrets: Secrets
 
-    init(slackClient: Slack, logger: Logger) {
+    init(slackClient: Slack, logger: Logger, secrets: Secrets) {
         self.slack = slackClient
         self.log = logger
+        self.secrets = secrets
     }
 }
 
@@ -24,7 +25,7 @@ extension OnTapController: ServiceType {
 
     static func makeService(for container: Container) throws -> OnTapController {
         let slack = try container.make(Slack.self)
-        let onTap = OnTapController(slackClient: slack, logger: try container.make(Logger.self))
+        let onTap = OnTapController(slackClient: slack, logger: try container.make(), secrets: try container.make())
         slack.register(responder: onTap, on: container)
 
         return onTap
@@ -46,20 +47,20 @@ extension OnTapController: RouteCollection {
         return OnTapMemory.kegSystem
     }
 
-    func update(request: Request, beer: Beer) throws -> EventLoopFuture<Response> {
+    func update(request: Request, beer: Beer) throws -> Response {
         return try update(request: request, beer: Optional(beer))
     }
 
-    func delete(request: Request) throws -> EventLoopFuture<Response> {
+    func delete(request: Request) throws -> Response {
         return try update(request: request, beer: nil)
     }
 
-    func update(request: Request, beer: Beer?) throws -> EventLoopFuture<Response> {
-        guard let deviceID = request.http.headers.firstValue(name: .onTapDeviceIdentifier),
-            deviceID == iPadDeviceID else {
+    func update(request: Request, beer: Beer?) throws -> Response {
+        guard let deviceID = request.http.headers[.onTapDeviceIdentifier].first,
+            deviceID.secureCompare(to: secrets.onTapSecret) else {
 
-            log.error("Unrecognized device attempted to update tap")
-            return request.response().encode(status: .unauthorized, for: request)
+            log.warning("Invalid onTap secret provided by client")
+            return request.response(status: .unauthorized)
         }
 
         let tap: Tap
@@ -67,7 +68,7 @@ extension OnTapController: RouteCollection {
             tap = try request.parameters.next(Tap.self)
         } catch let error as RoutingError {
             log.error("url path parameter decoding failed \(error)")
-            return request.response().encode(status: .badRequest, for: request)
+            return request.response(status: .badRequest)
         }
 
         log.debug("Received: \(tap) tap \(beer?.name.uppercased() ?? "<nil>")")
@@ -78,7 +79,7 @@ extension OnTapController: RouteCollection {
             try notifySlackOfNewBeer(beer, on: tap)
         }
 
-        return OnTapMemory.kegSystem.encode(status: .ok, for: request)
+        return try request.response(content: OnTapMemory.kegSystem)
     }
 }
 
