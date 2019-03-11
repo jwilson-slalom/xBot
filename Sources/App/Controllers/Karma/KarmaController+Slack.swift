@@ -19,16 +19,19 @@ extension KarmaController {
         }
     }
 
-    func karmaCommand(_ req: Request, content: Command) throws -> Future<Response> {
+    func karmaCommand(_ req: Request, content: Command) throws -> HTTPStatus {
         guard let responseUrl = content.response_url else {
-            return req.future(error: Abort(.badRequest))
+            return .badRequest
+        }
+        guard try req.validateSlackRequest(signingSecret: secrets.slackRequestSigningSecret) else {
+            return .unauthorized
         }
 
         // Do this in the background
         processKarmaCommand(req, content: content, responseUrl: responseUrl)
 
         // Respond immediately
-        return req.response().encode(status: .ok, for: req)
+        return .ok
     }
 
     private func processKarmaCommand(_ req: Request, content: Command, responseUrl: String) {
