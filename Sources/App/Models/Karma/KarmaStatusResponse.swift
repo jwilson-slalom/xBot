@@ -29,6 +29,10 @@ class KarmaStatusResponse: SlackKitResponse {
                    text: receivedKarma.user.asSlackUserMention(),
                    attachments: [KarmaStatusResponse.slackAttachment(with: receivedKarma, totalKarma: karmaStatus.count)])
     }
+
+    init(forLeaderboardCommandStatuses statuses: [KarmaStatus]) {
+        super.init(to: nil, text: "Leaderboard", attachments: statuses.map { KarmaStatusResponse.slashCommandSlackAttachment(karmaStatus: $0) })
+    }
 }
 
 extension KarmaStatusResponse {

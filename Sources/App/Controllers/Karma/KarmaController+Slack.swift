@@ -9,33 +9,37 @@ import Vapor
 
 extension KarmaController {
     func registerSlackRoutes(on router: Router) {
-        router.post("command", use: command)
-        router.post(Command.self, at: "command/karma", use: karmaCommand)
+        router.post(Command.self, at: "command", use: command)
     }
 
-    func command(_ req: Request) throws -> Future<Response> {
-        return try req.content.decode(Command.self).flatMap { _ in
-            try Leaderboard(text: "leaderboard").encode(for: req)
-        }
-    }
-
-    func karmaCommand(_ req: Request, content: Command) throws -> Future<Response> {
+    func command(_ req: Request, content: Command) throws -> Future<Response> {
         guard let responseUrl = content.response_url else {
             return req.future(error: Abort(.badRequest))
         }
 
         // Do this in the background
-        processKarmaCommand(req, content: content, responseUrl: responseUrl)
+        send(karmaStatuses: process(karmaCommand: content), to: responseUrl, with: req, format: formatter(for: content))
 
         // Respond immediately
         return req.response().encode(status: .ok, for: req)
     }
 
-    private func processKarmaCommand(_ req: Request, content: Command, responseUrl: String) {
-        let userIds = karmaParser.userIds(from: content.text ?? "")
+    private func process(karmaCommand command: Command) -> () -> Future<[KarmaStatus]> {
+        let repository = karmaStatusRepository
 
-        karmaStatusRepository
-            .find(ids: userIds)
+        switch command.command {
+        case "/leaderboard"?:
+            return { return repository.top(count: 10) }
+        case "/karma"?:
+            let userIds = karmaParser.userIds(from: command.text ?? "")
+            return { return repository.find(ids: userIds) }
+        default:
+            return { return repository.find(ids: []) }
+        }
+    }
+
+    private func send(karmaStatuses: () -> Future<[KarmaStatus]>, to responseUrl: String, with req: Request, format: @escaping ([KarmaStatus]) -> KarmaStatusResponse) {
+        karmaStatuses()
             .flatMap { karma -> Future<Response> in
                 guard !karma.isEmpty else {
                     return try req.client().post(responseUrl) { beforePost in
@@ -45,12 +49,20 @@ extension KarmaController {
                 }
 
                 return try req.client().post(responseUrl) { beforePost in
-                    let karmaResponse = KarmaStatusResponse(forSlashCommandWithKarmaStatuses: karma)
-                    try beforePost.content.encode(json: karmaResponse)
+                    try beforePost.content.encode(json: format(karma))
                 }
             }.catch {
                 self.log.error("Failed to respond to Slack slash command \($0)")
-            }
+        }
+    }
+
+    private func formatter(for command: Command) -> ([KarmaStatus]) -> KarmaStatusResponse {
+        switch command.command {
+        case "/leaderboard"?:
+            return { karma in return  KarmaStatusResponse(forLeaderboardCommandStatuses: karma)}
+        default:
+            return { karma in return  KarmaStatusResponse(forSlashCommandWithKarmaStatuses: karma)}
+        }
     }
 }
 
