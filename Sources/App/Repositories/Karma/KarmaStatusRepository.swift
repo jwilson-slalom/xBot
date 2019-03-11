@@ -53,6 +53,12 @@ final class SQLiteKarmaStatusRepository: KarmaStatusRepository {
             KarmaStatus.query(on: connection).filter(\.id ~~ ids).all()
         }
     }
+
+    func top(_ count: Int) -> Future<[KarmaStatus]> {
+        return db.withConnection { connection in
+            KarmaStatus.query(on: connection).sort(\.count, .descending).range(..<count).all()
+        }
+    }
 }
 
 //MARK: - ServiceType conformance
