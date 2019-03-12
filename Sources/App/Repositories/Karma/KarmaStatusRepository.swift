@@ -14,6 +14,7 @@ protocol KarmaStatusRepository: ServiceType {
     func save(karma: KarmaStatus) -> Future<KarmaStatus>
     func find(id: String) -> Future<KarmaStatus?>
     func find(ids: [String]) -> Future<[KarmaStatus]>
+    func top(count: Int) -> Future<[KarmaStatus]>
 }
 
 extension Database {
@@ -51,6 +52,12 @@ final class SQLiteKarmaStatusRepository: KarmaStatusRepository {
     func find(ids: [String]) -> Future<[KarmaStatus]> {
         return db.withConnection { connection in
             KarmaStatus.query(on: connection).filter(\.id ~~ ids).all()
+        }
+    }
+
+    func top(count: Int) -> Future<[KarmaStatus]> {
+        return db.withConnection { connection in
+            KarmaStatus.query(on: connection).sort(\.count, .descending).range(..<count).all()
         }
     }
 }
