@@ -21,13 +21,13 @@ extension KarmaController {
         }
 
         // Do this in the background
-        send(karmaStatuses: process(karmaCommand: content), to: responseUrl, with: req, command: content)
+        send(karmaStatuses: process(karmaCommand: content, on: req), to: responseUrl, with: req, command: content)
 
         // Respond immediately
         return .ok
     }
 
-    private func process(karmaCommand command: Command) -> Future<[KarmaStatus]> {
+    private func process(karmaCommand command: Command, on req: Request) -> Future<[KarmaStatus]> {
         let repository = karmaStatusRepository
 
         switch command.command {
@@ -37,7 +37,7 @@ extension KarmaController {
             let userIds = karmaParser.userIds(from: command.text ?? "")
             return repository.find(ids: userIds)
         default:
-            return repository.find(ids: [])
+            return req.future(error: Abort(.badRequest))
         }
     }
 
