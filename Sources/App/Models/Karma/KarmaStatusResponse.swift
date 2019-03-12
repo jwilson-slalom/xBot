@@ -31,7 +31,8 @@ class KarmaStatusResponse: SlackKitResponse {
     }
 
     init(forLeaderboardCommandStatuses statuses: [KarmaStatus]) {
-        super.init(to: nil, text: "Leaderboard", attachments: statuses.map { KarmaStatusResponse.slashCommandSlackAttachment(karmaStatus: $0) })
+        super.init(to: nil, text: "Karma Leaderboard",
+                   attachments: [KarmaStatusResponse.slackLeaderboardAttachment(with: statuses)])
     }
 }
 
@@ -64,6 +65,22 @@ extension KarmaStatusResponse {
         return Attachment(attachment: ["fallback": currentCountText(karmaStatus: karmaStatus, fallback: true),
                                        "color": messageColor(karmaCount: karmaStatus.count),
                                        "text": currentCountText(karmaStatus: karmaStatus, fallback: false)])
+    }
+
+    static func slackLeaderboardAttachment(with statuses: [KarmaStatus]) -> Attachment {
+        var fields: [[String:Any]] = [["title": "User", "short": true], ["title": "Karma", "short": true]]
+
+        statuses.forEach { status in
+            fields.append(["value": status.id?.asSlackUserMention(), "short": true])
+            fields.append(["value": status.count.description, "short": true])
+        }
+
+        return Attachment(attachment: [
+            "fallback": "Leaderboard",
+            "title": "Leaderboard",
+            "pretext": "The users with the most karma are:",
+            "fields": fields
+            ])
     }
 
     private static func currentCountText(karmaStatus: KarmaStatus, fallback: Bool) -> String {

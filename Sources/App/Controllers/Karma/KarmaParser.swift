@@ -33,9 +33,7 @@ final class KarmaParser {
 
     func userIds(from message: String) -> [String] {
         return userRegex.matches(in: message, range: NSRange(message.startIndex..<message.endIndex, in: message)).map { match in
-            print(match)
             let groups = match.captureGroups(testedString: message)
-            print(groups)
             return groups[0]
         }
     }

@@ -12,16 +12,19 @@ extension KarmaController {
         router.post(Command.self, at: "command", use: command)
     }
 
-    func command(_ req: Request, content: Command) throws -> Future<Response> {
+    func command(_ req: Request, content: Command) throws -> HTTPStatus {
         guard let responseUrl = content.response_url else {
-            return req.future(error: Abort(.badRequest))
+            return .badRequest
+        }
+        guard try req.validateSlackRequest(signingSecret: secrets.slackRequestSigningSecret) else {
+            return .unauthorized
         }
 
         // Do this in the background
         send(karmaStatuses: process(karmaCommand: content), to: responseUrl, with: req, format: formatter(for: content))
 
         // Respond immediately
-        return req.response().encode(status: .ok, for: req)
+        return .ok
     }
 
     private func process(karmaCommand command: Command) -> () -> Future<[KarmaStatus]> {
@@ -49,7 +52,8 @@ extension KarmaController {
                 }
 
                 return try req.client().post(responseUrl) { beforePost in
-                    try beforePost.content.encode(json: format(karma))
+                    let thing = format(karma)
+                    try beforePost.content.encode(json: thing)
                 }
             }.catch {
                 self.log.error("Failed to respond to Slack slash command \($0)")
