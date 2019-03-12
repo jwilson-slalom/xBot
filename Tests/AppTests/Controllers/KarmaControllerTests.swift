@@ -38,6 +38,7 @@ final class KarmaControllerTests: AppTestCase {
         super.tearDown()
 
         try? testStatusRepository.shutdown()
+        try? testHistoryRepository.shutdown()
     }
 
     func testThatItReturnsAllStatusObjects() {
@@ -73,6 +74,32 @@ final class KarmaControllerTests: AppTestCase {
         do {
             let status = try controller.updateStatus(request, content: expectedStatus).wait()
             XCTAssertEqual(status, expectedStatus)
+        } catch {
+            XCTFail(error.localizedDescription)
+        }
+    }
+
+    func testThatItReturnsAllHistoryObjects() {
+        let expectedHistory = [KarmaSlackHistory(id: 1, karmaCount: 2, fromUser: "jacob", karmaReceiver: "allen", channel: "watercooler"),
+                               KarmaSlackHistory(id: 2, karmaCount: 1, fromUser: "allen", karmaReceiver: "jacob", channel: "watercooler")]
+        testHistoryRepository.multiHistory = expectedHistory
+
+        let request = emptyRequest()
+        do {
+            let history = try controller.allHistory(request).wait()
+            XCTAssertEqual(history, expectedHistory)
+        } catch {
+            XCTFail(error.localizedDescription)
+        }
+    }
+
+    func testThatItCreatesAHistory() {
+        let expectedHistory = KarmaSlackHistory(id: 1, karmaCount: 2, fromUser: "jacob", karmaReceiver: "allen", channel: "watercooler")
+
+        let request = emptyRequest()
+        do {
+            let history = try controller.createHistory(request, content: expectedHistory).wait()
+            XCTAssertEqual(history, expectedHistory)
         } catch {
             XCTFail(error.localizedDescription)
         }

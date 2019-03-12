@@ -41,6 +41,13 @@ final class TestStatusRepository: KarmaStatusRepository {
         }
         return group.future(statuses)
     }
+
+    func top(count: Int) -> EventLoopFuture<[KarmaStatus]> {
+        guard let statuses = statuses else {
+            return group.future(error: TestStatusError.noStatuses)
+        }
+        return group.future(statuses)
+    }
 }
 
 extension TestStatusRepository {
