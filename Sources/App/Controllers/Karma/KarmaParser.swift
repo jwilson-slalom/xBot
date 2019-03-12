@@ -31,21 +31,11 @@ final class KarmaParser {
         }
     }
 
-    func userIdParse(from message: String) -> [String] {
+    func userIds(from message: String) -> [String] {
         return userRegex.matches(in: message, range: NSRange(message.startIndex..<message.endIndex, in: message)).map { match in
             let groups = match.captureGroups(testedString: message)
             return groups[0]
         }
-    }
-
-    func userIds(from message: String) -> [String] {
-        var ids = userIdParse(from: message)
-
-        if ids.isEmpty {
-            ids = message.split(separator: " ").map { String($0) }
-        }
-
-        return ids
     }
 
     private func process(match: NSTextCheckingResult, on message: String) -> KarmaAdjustment {
