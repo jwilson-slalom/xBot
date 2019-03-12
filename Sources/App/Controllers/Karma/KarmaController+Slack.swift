@@ -21,28 +21,28 @@ extension KarmaController {
         }
 
         // Do this in the background
-        send(karmaStatuses: process(karmaCommand: content), to: responseUrl, with: req, format: formatter(for: content))
+        send(karmaStatuses: process(karmaCommand: content), to: responseUrl, with: req, command: content)
 
         // Respond immediately
         return .ok
     }
 
-    private func process(karmaCommand command: Command) -> () -> Future<[KarmaStatus]> {
+    private func process(karmaCommand command: Command) -> Future<[KarmaStatus]> {
         let repository = karmaStatusRepository
 
         switch command.command {
         case "/leaderboard"?:
-            return { return repository.top(count: 10) }
+            return repository.top(count: 10)
         case "/karma"?:
             let userIds = karmaParser.userIds(from: command.text ?? "")
-            return { return repository.find(ids: userIds) }
+            return repository.find(ids: userIds)
         default:
-            return { return repository.find(ids: []) }
+            return repository.find(ids: [])
         }
     }
 
-    private func send(karmaStatuses: () -> Future<[KarmaStatus]>, to responseUrl: String, with req: Request, format: @escaping ([KarmaStatus]) -> KarmaStatusResponse) {
-        karmaStatuses()
+    private func send(karmaStatuses: Future<[KarmaStatus]>, to responseUrl: String, with req: Request, command: Command) {
+        karmaStatuses
             .flatMap { karma -> Future<Response> in
                 guard !karma.isEmpty else {
                     return try req.client().post(responseUrl) { beforePost in
@@ -52,20 +52,19 @@ extension KarmaController {
                 }
 
                 return try req.client().post(responseUrl) { beforePost in
-                    let thing = format(karma)
-                    try beforePost.content.encode(json: thing)
+                    try beforePost.content.encode(json: self.formatter(for: command, karma: karma))
                 }
             }.catch {
                 self.log.error("Failed to respond to Slack slash command \($0)")
         }
     }
 
-    private func formatter(for command: Command) -> ([KarmaStatus]) -> KarmaStatusResponse {
+    private func formatter(for command: Command, karma: [KarmaStatus]) -> KarmaStatusResponse {
         switch command.command {
         case "/leaderboard"?:
-            return { karma in return  KarmaStatusResponse(forLeaderboardCommandStatuses: karma)}
+            return  KarmaStatusResponse(forLeaderboardCommandStatuses: karma)
         default:
-            return { karma in return  KarmaStatusResponse(forSlashCommandWithKarmaStatuses: karma)}
+            return  KarmaStatusResponse(forSlashCommandWithKarmaStatuses: karma)
         }
     }
 }
