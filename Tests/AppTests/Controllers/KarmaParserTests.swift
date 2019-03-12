@@ -9,17 +9,6 @@
 import XCTest
 
 final class KarmaParserTests: XCTestCase {
-    static let allTests = [
-        ("testThatItParsesOneUser_Positive", testThatItParsesOneUser_Positive),
-        ("testThatItParsesOneUser_Negative", testThatItParsesOneUser_Negative),
-        ("testThatItParsesMultipleUser_Positive", testThatItParsesMultipleUser_Positive),
-        ("testThatItParsesMultipleUser_Negative", testThatItParsesMultipleUser_Negative),
-        ("testThatItParsesMultipleUser_PositiveAndNegative", testThatItParsesMultipleUser_PositiveAndNegative),
-        ("testThatItDoesNotParsesUsers_Positive", testThatItDoesNotParsesUsers_Positive),
-        ("testThatItDoesNotParsesUsers_Negative", testThatItDoesNotParsesUsers_Negative),
-        ("testThatItDoesParsesUsersAndHitsMaximum_Positive", testThatItDoesParsesUsersAndHitsMaximum_Positive),
-        ("testThatItDoesParsesUsersAndHitsMaximum_Negative", testThatItDoesParsesUsersAndHitsMaximum_Negative)
-    ]
 
     var testMessage: String!
     var expectedKarmaMessages: [KarmaAdjustment]!

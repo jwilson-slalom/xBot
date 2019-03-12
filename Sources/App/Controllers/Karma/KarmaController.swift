@@ -5,7 +5,7 @@ final class KarmaController {
 
     let karmaStatusRepository: KarmaStatusRepository
     let karmaHistoryRepository: KarmaSlackHistoryRepository
-    let slack: Slack
+    let slack: SlackMessageSender
     let log: Logger
     let secrets: Secrets
 
@@ -13,7 +13,7 @@ final class KarmaController {
 
     init(karmaStatusRepository: KarmaStatusRepository,
          karmaHistoryRepository: KarmaSlackHistoryRepository,
-         slack: Slack,
+         slack: SlackMessageSender,
          log: Logger,
          secrets: Secrets) {
 
@@ -35,14 +35,16 @@ extension KarmaController: RouteCollection {
 
 extension KarmaController: ServiceType {
     static func makeService(for container: Container) throws -> KarmaController {
-        let slack = try container.make(Slack.self)
+        let slack = try container.make(SlackMessageSender.self)
         let karmaController = KarmaController(karmaStatusRepository: try container.make(),
                                               karmaHistoryRepository: try container.make(),
                                               slack: slack,
                                               log: try container.make(),
                                               secrets: try container.make())
 
-        slack.register(responder: karmaController, on: container)
+        if let slack = slack as? Slack {
+            slack.register(responder: karmaController, on: container)
+        }
 
         return karmaController
     }
