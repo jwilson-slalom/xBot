@@ -9,18 +9,8 @@
 import Vapor
 import XCTest
 
-class AppTestCase: XCTestCase {
-    var app: Application!
-
-    override func setUp() {
-        app = try! Application.testable()
-    }
-
-    override func tearDown() {
-        try? app.syncShutdownGracefully()
-    }
-
-    func emptyRequest() -> Request {
+extension XCTestCase {
+    func emptyRequest(using app: Application) -> Request {
         let method = HTTPMethod.GET
         let url = URL(string: "path")
         let headers = HTTPHeaders()
@@ -31,18 +21,7 @@ class AppTestCase: XCTestCase {
         return wrappedRequest
     }
 
-    func createStatusRequest(status: KarmaStatus) -> Request {
-        let method = HTTPMethod.GET
-        let url = URL(string: "path")
-        let headers = HTTPHeaders()
-
-        let request = HTTPRequest(method: method, url: url!, headers: headers)
-        let wrappedRequest = Request(http: request, using: app)
-        try! wrappedRequest.content.encode(status)
-        return wrappedRequest
-    }
-
-    func validatedSlackRequest() -> Request {
+    func validatedSlackRequest(using app: Application) -> Request {
         let method = HTTPMethod.GET
         let url = URL(string: "path")
         var headers = HTTPHeaders()

@@ -6,9 +6,11 @@
 //
 
 @testable import App
+import Vapor
 import XCTest
 
-final class KarmaControllerTests: AppTestCase {
+final class KarmaControllerTests: XCTestCase {
+    var app: Application!
 
     var testStatusRepository: TestStatusRepository!
     var testHistoryRepository: TestHistoryRepository!
@@ -20,7 +22,7 @@ final class KarmaControllerTests: AppTestCase {
     var controller: KarmaController!
 
     override func setUp() {
-        super.setUp()
+        app = try! Application.testable()
 
         testStatusRepository = TestStatusRepository()
         testHistoryRepository = TestHistoryRepository()
@@ -38,7 +40,7 @@ final class KarmaControllerTests: AppTestCase {
     }
 
     override func tearDown() {
-        super.tearDown()
+        try? app.syncShutdownGracefully()
 
         try? testStatusRepository.shutdown()
         try? testHistoryRepository.shutdown()
@@ -50,7 +52,7 @@ final class KarmaControllerTests: AppTestCase {
                                 KarmaStatus(id: "OtherId", count: 3, type: .other)]
         testStatusRepository.statuses = expectedStatuses
 
-        let request = emptyRequest()
+        let request = emptyRequest(using: app)
         do {
             let statuses = try controller.allStatus(request).wait()
             XCTAssertEqual(statuses, expectedStatuses)
@@ -62,7 +64,7 @@ final class KarmaControllerTests: AppTestCase {
     func testThatItCreatesAStatus() {
         let expectedStatus = KarmaStatus(id: "StatusId", count: 2, type: .user)
 
-        let request = emptyRequest()
+        let request = emptyRequest(using: app)
         do {
             let status = try controller.createStatus(request, content: expectedStatus).wait()
             XCTAssertEqual(status, expectedStatus)
@@ -74,7 +76,7 @@ final class KarmaControllerTests: AppTestCase {
     func testThatItUpdatesAStatus() {
         let expectedStatus = KarmaStatus(id: "StatusId", count: 2, type: .user)
 
-        let request = emptyRequest()
+        let request = emptyRequest(using: app)
         do {
             let status = try controller.updateStatus(request, content: expectedStatus).wait()
             XCTAssertEqual(status, expectedStatus)
@@ -89,7 +91,7 @@ final class KarmaControllerTests: AppTestCase {
                                KarmaSlackHistory(id: 2, karmaCount: 1, fromUser: "allen", karmaReceiver: "jacob", channel: "watercooler")]
         testHistoryRepository.multiHistory = expectedHistory
 
-        let request = emptyRequest()
+        let request = emptyRequest(using: app)
         do {
             let history = try controller.allHistory(request).wait()
             XCTAssertEqual(history, expectedHistory)
@@ -101,7 +103,7 @@ final class KarmaControllerTests: AppTestCase {
     func testThatItCreatesAHistory() {
         let expectedHistory = KarmaSlackHistory(id: 1, karmaCount: 2, fromUser: "jacob", karmaReceiver: "allen", channel: "watercooler")
 
-        let request = emptyRequest()
+        let request = emptyRequest(using: app)
         do {
             let history = try controller.createHistory(request, content: expectedHistory).wait()
             XCTAssertEqual(history, expectedHistory)
@@ -114,7 +116,7 @@ final class KarmaControllerTests: AppTestCase {
     func testThatItFailsACommandRequestWhenNoResponseUrl() {
         let command = commandWith(command: "/karma", response_url: nil)
 
-        let request = emptyRequest()
+        let request = emptyRequest(using: app)
         do {
             let status = try controller.command(request, content: command)
             XCTAssertEqual(status, .badRequest)
@@ -126,7 +128,7 @@ final class KarmaControllerTests: AppTestCase {
     func testThatItFailsACommandRequestItCantValidate() {
         let command = commandWith(command: "/karma", response_url: "slackReponse")
 
-        let request = emptyRequest()
+        let request = emptyRequest(using: app)
         do {
             let status = try controller.command(request, content: command)
             XCTAssertEqual(status, .unauthorized)
@@ -138,7 +140,7 @@ final class KarmaControllerTests: AppTestCase {
     func testThatItReturnsOkWhenCommandRequestIsValidated() {
         let command = commandWith(command: "/karma", response_url: "slackReponse")
 
-        let request = validatedSlackRequest()
+        let request = validatedSlackRequest(using: app)
         do {
             let status = try controller.command(request, content: command)
             XCTAssertEqual(status, .ok)
@@ -255,7 +257,7 @@ final class KarmaControllerTests: AppTestCase {
 }
 
 extension KarmaControllerTests {
-    func commandWith(command: String?, response_url: String?) -> Command {
+    func commandWith(command: String?, response_url: String?) -> App.Command {
         return Command(command: command,
                        response_url: response_url,
                        trigger_id: nil,
@@ -270,3 +272,5 @@ extension KarmaControllerTests {
                        user_name: nil)
     }
 }
+
+
