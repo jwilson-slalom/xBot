@@ -8,7 +8,7 @@
 @testable import App
 import XCTest
 
-final class KarmaControllerTests: XCTestCase {
+final class KarmaControllerTests: AppTestCase {
 
     var testStatusRepository: TestStatusRepository!
     var testHistoryRepository: TestHistoryRepository!
@@ -19,6 +19,7 @@ final class KarmaControllerTests: XCTestCase {
     var controller: KarmaController!
 
     override func setUp() {
+        super.setUp()
 
         testStatusRepository = TestStatusRepository()
         testHistoryRepository = TestHistoryRepository()
@@ -31,5 +32,49 @@ final class KarmaControllerTests: XCTestCase {
                                      slack: testSlack,
                                      log: testLogger,
                                      secrets: testSecrets)
+    }
+
+    override func tearDown() {
+        super.tearDown()
+
+        try? testStatusRepository.shutdown()
+    }
+
+    func testThatItReturnsAllStatusObjects() {
+        let expectedStatuses = [KarmaStatus(id: "StatusId", count: 2, type: .user),
+                                KarmaStatus(id: "OtherId", count: 3, type: .other)]
+        testStatusRepository.statuses = expectedStatuses
+
+        let request = emptyRequest()
+        do {
+            let statuses = try controller.allStatus(request).wait()
+            XCTAssertEqual(statuses, expectedStatuses)
+        } catch {
+            XCTFail(error.localizedDescription)
+        }
+    }
+
+    func testThatItCreatesAStatus() {
+        let expectedStatus = KarmaStatus(id: "StatusId", count: 2, type: .user)
+
+        let request = emptyRequest()
+        do {
+            let status = try controller.createStatus(request, content: expectedStatus).wait()
+            XCTAssertEqual(status, expectedStatus)
+        } catch {
+            XCTFail(error.localizedDescription)
+        }
+    }
+
+    func testThatItUpdatesAStatus() {
+        let expectedStatus = KarmaStatus(id: "StatusId", count: 2, type: .user)
+
+        let request = emptyRequest()
+        do {
+            let status = try controller.updateStatus(request, content: expectedStatus).wait()
+            XCTAssertEqual(status, expectedStatus)
+        } catch {
+            XCTFail(error.localizedDescription)
+        }
     }
 }

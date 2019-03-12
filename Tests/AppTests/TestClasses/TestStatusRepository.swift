@@ -13,12 +13,18 @@ final class TestStatusRepository: KarmaStatusRepository {
 
     private let group: MultiThreadedEventLoopGroup
 
+    var statuses: [KarmaStatus]?
+    var status: KarmaStatus?
+
     init() {
         group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     }
 
     func all() -> EventLoopFuture<[KarmaStatus]> {
-        return group.future([KarmaStatus(id: "Id", count: 3, type: .user)])
+        guard let statuses = statuses else {
+            return group.future(error: TestStatusError.noStatuses)
+        }
+        return group.future(statuses)
     }
 
     func save(karma: KarmaStatus) -> EventLoopFuture<KarmaStatus> {
@@ -26,11 +32,14 @@ final class TestStatusRepository: KarmaStatusRepository {
     }
 
     func find(id: String) -> EventLoopFuture<KarmaStatus?> {
-        return group.future(KarmaStatus(id: "Id", count: 3, type: .user))
+        return group.future(status)
     }
 
     func find(ids: [String]) -> EventLoopFuture<[KarmaStatus]> {
-        return group.future([KarmaStatus(id: "Id", count: 3, type: .user)])
+        guard let statuses = statuses else {
+            return group.future(error: TestStatusError.noStatuses)
+        }
+        return group.future(statuses)
     }
 }
 
@@ -39,6 +48,16 @@ extension TestStatusRepository {
 
     static func makeService(for worker: Container) throws -> TestStatusRepository {
         return .init()
+    }
+}
+
+extension TestStatusRepository {
+    enum TestStatusError: Error {
+        case noStatuses
+    }
+
+    func shutdown() throws {
+        try group.syncShutdownGracefully()
     }
 }
 
