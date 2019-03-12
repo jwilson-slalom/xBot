@@ -71,7 +71,7 @@ extension KarmaStatusResponse {
         var fields: [[String:Any]] = [["title": "User", "short": true], ["title": "Karma", "short": true]]
 
         statuses.forEach { status in
-            fields.append(["value": status.id?.asSlackUserMention(), "short": true])
+            fields.append(["value": status.id?.asSlackUserMention() as Any, "short": true])
             fields.append(["value": status.count.description, "short": true])
         }
 
