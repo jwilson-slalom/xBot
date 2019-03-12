@@ -8,15 +8,15 @@
 @testable import App
 import XCTest
 
-final class KarmaParserTests: XCTestCase {
+final class KarmaMessageParserTests: XCTestCase {
 
     var testMessage: String!
     var expectedKarmaMessages: [KarmaAdjustment]!
 
-    var parser: KarmaParser!
+    var parser: KarmaMessageParser!
 
     override func setUp() {
-        parser = KarmaParser()
+        parser = KarmaMessageParser()
     }
 
     func testThatItParsesOneUser_Positive() {

@@ -10,7 +10,5 @@ import Vapor
 import XCTest
 
 class TestLogger: Logger {
-    func log(_ string: String, at level: LogLevel, file: String, function: String, line: UInt, column: UInt) {
-        print("log")
-    }
+    func log(_ string: String, at level: LogLevel, file: String, function: String, line: UInt, column: UInt) {}
 }

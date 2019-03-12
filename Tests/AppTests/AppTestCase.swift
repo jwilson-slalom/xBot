@@ -41,6 +41,21 @@ class AppTestCase: XCTestCase {
         try! wrappedRequest.content.encode(status)
         return wrappedRequest
     }
+
+    func validatedSlackRequest() -> Request {
+        let method = HTTPMethod.GET
+        let url = URL(string: "path")
+        var headers = HTTPHeaders()
+        headers.add(name: HTTPHeaderName.slackTimestamp, value: "timestamp")
+        headers.add(name: HTTPHeaderName.slackSignature, value: "v0=2205e87280007c5c5dd9c08ef28f8de833b206bdfd9234d0f67f7054ec0b5acd")
+
+        var request = HTTPRequest(method: method, url: url!, headers: headers)
+        request.contentType = MediaType.urlEncodedForm
+        request.body = HTTPBody(string: "body")
+
+        let wrappedRequest = Request(http: request, using: app)
+        return wrappedRequest
+    }
 }
 
 extension Application {

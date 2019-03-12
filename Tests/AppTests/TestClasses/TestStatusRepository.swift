@@ -15,6 +15,7 @@ final class TestStatusRepository: KarmaStatusRepository {
 
     var statuses: [KarmaStatus]?
     var status: KarmaStatus?
+    var error: TestStatusError?
 
     init() {
         group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -28,7 +29,7 @@ final class TestStatusRepository: KarmaStatusRepository {
     }
 
     func save(karma: KarmaStatus) -> EventLoopFuture<KarmaStatus> {
-        return group.future(karma)
+        return error == nil ? group.future(karma) : group.future(error: error!)
     }
 
     func find(id: String) -> EventLoopFuture<KarmaStatus?> {
@@ -61,6 +62,7 @@ extension TestStatusRepository {
 extension TestStatusRepository {
     enum TestStatusError: Error {
         case noStatuses
+        case badRepo
     }
 
     func shutdown() throws {

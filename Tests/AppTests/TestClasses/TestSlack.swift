@@ -10,11 +10,15 @@ import Vapor
 import XCTest
 
 class TestSlack: SlackMessageSender {
+
+    var sendMessageHandler: ((SlackKitSendable) -> Void)?
+    var sendMessageToUserHandler: ((SlackKitSendable, String) -> Void)?
+
     func send(message: SlackKitSendable) throws {
-        print("SendMessage")
+        sendMessageHandler?(message)
     }
 
     func send(message: SlackKitSendable, onlyVisibleTo user: String) throws {
-        print("SendMessage Visibile to user")
+        sendMessageToUserHandler?(message, user)
     }
 }

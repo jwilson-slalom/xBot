@@ -23,3 +23,9 @@ class ChannelID {
         self.id = id
     }
 }
+
+extension ChannelID: Equatable {
+    static func == (lhs: ChannelID, rhs: ChannelID) -> Bool {
+        return lhs.id == rhs.id
+    }
+}
