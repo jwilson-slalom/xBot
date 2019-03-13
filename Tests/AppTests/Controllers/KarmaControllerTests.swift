@@ -149,7 +149,7 @@ final class KarmaControllerTests: XCTestCase {
         }
     }
 
-    func testThatItHandlesWhenUserTriesToAdjustThemselves() {
+    func testThatItDoesNotAllowAUserToAdjustKarmaForSelf() {
         let incomingMessage = SlackKitIncomingMessage(messageText: "text", channelId: "channelId", sender: "jacob", timestamp: "timestamp")
 
         let expectedSlackMessage = SlackKitResponse(to: incomingMessage, text: "You can't adjust karma for yourself!")
