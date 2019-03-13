@@ -14,8 +14,8 @@ final class OnTapController {
     let log: Logger
     let secrets: Secrets
 
-    init(slackClient: Slack, logger: Logger, secrets: Secrets) {
-        self.slack = slackClient
+    init(slack: Slack, logger: Logger, secrets: Secrets) {
+        self.slack = slack
         self.log = logger
         self.secrets = secrets
     }
@@ -24,11 +24,7 @@ final class OnTapController {
 extension OnTapController: ServiceType {
 
     static func makeService(for container: Container) throws -> OnTapController {
-        let slack = try container.make(Slack.self)
-        let onTap = OnTapController(slackClient: slack, logger: try container.make(), secrets: try container.make())
-        slack.register(responder: onTap, on: container)
-
-        return onTap
+        return OnTapController(slack: try container.make(), logger: try container.make(), secrets: try container.make())
     }
 }
 
