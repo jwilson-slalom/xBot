@@ -6,11 +6,11 @@
 //
 
 import Foundation
+import struct SlackKit.User
 
 extension OnTapController: SlackResponder {
 
-    func handle(incomingMessage: SlackKitIncomingMessage) throws {
-        guard let botUser = slack.botUser else { return }
+    func handle(incomingMessage: SlackKitIncomingMessage, forBotUser botUser: User) throws {
         guard let directedTo = incomingMessage.text.userIDMentionedBeforeAnyOtherContent() else { return }
         guard botUser.id == directedTo else { return }
 

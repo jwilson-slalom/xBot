@@ -10,27 +10,16 @@ import Vapor
 
 struct Slack: ServiceType {
     private let slackKit = SlackKit()
-    private let listener: SlackListener
     private let log: Logger
-
-    public var botUser: User? {
-        return listener.botUser
-    }
 
     static func makeService(for container: Container) throws -> Slack {
         return Slack(secrets: try container.make(),
-                     listener: try container.make(),
                      logger: try container.make())
     }
 
-    init(secrets: Secrets, listener: SlackListener, logger: Logger) {
-        self.listener = listener
+    init(secrets: Secrets, logger: Logger) {
         self.log = logger
         slackKit.addWebAPIAccessWithToken(secrets.slackAppBotUserAPI)
-    }
-
-    func register(responder: SlackResponder, on worker: Worker) {
-        listener.register(responder: responder, on: worker)
     }
 
     func send(message: SlackKitSendable) throws {
