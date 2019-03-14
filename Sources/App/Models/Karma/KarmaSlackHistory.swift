@@ -45,9 +45,9 @@ extension KarmaSlackHistory: Equatable {
     static func == (lhs: KarmaSlackHistory, rhs: KarmaSlackHistory) -> Bool {
         return lhs.id == rhs.id &&
                 lhs.karmaCount == rhs.karmaCount &&
-                lhs.fromUser == rhs.fromUser &&
                 lhs.karmaReceiver == rhs.karmaReceiver &&
-                lhs.channel == rhs.channel
+                lhs.karmaSender == rhs.karmaSender &&
+                lhs.inChannel == rhs.inChannel
     }
 }
 

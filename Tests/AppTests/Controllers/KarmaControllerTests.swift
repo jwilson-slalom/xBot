@@ -49,8 +49,8 @@ final class KarmaControllerTests: XCTestCase {
 
     // MARK: KarmaController+Status
     func testThatItReturnsAllStatusObjects() {
-        let expectedStatuses = [KarmaStatus(id: "StatusId", count: 2, type: .user),
-                                KarmaStatus(id: "OtherId", count: 3, type: .other)]
+        let expectedStatuses = [KarmaStatus(id: "StatusId", count: 2, type: KarmaStatusType.user.rawValue),
+                                KarmaStatus(id: "OtherId", count: 3, type: KarmaStatusType.other.rawValue)]
         testStatusRepository.statuses = expectedStatuses
 
         let request = emptyRequest(using: app)
@@ -63,7 +63,7 @@ final class KarmaControllerTests: XCTestCase {
     }
 
     func testThatItCreatesAStatus() {
-        let expectedStatus = KarmaStatus(id: "StatusId", count: 2, type: .user)
+        let expectedStatus = KarmaStatus(id: "StatusId", count: 2, type: KarmaStatusType.user.rawValue)
 
         let request = emptyRequest(using: app)
         do {
@@ -75,7 +75,7 @@ final class KarmaControllerTests: XCTestCase {
     }
 
     func testThatItUpdatesAStatus() {
-        let expectedStatus = KarmaStatus(id: "StatusId", count: 2, type: .user)
+        let expectedStatus = KarmaStatus(id: "StatusId", count: 2, type: KarmaStatusType.user.rawValue)
 
         let request = emptyRequest(using: app)
         do {
@@ -88,8 +88,8 @@ final class KarmaControllerTests: XCTestCase {
 
     // MARK: KarmaController+History
     func testThatItReturnsAllHistoryObjects() {
-        let expectedHistory = [KarmaSlackHistory(id: 1, karmaCount: 2, fromUser: "jacob", karmaReceiver: "allen", channel: "watercooler"),
-                               KarmaSlackHistory(id: 2, karmaCount: 1, fromUser: "allen", karmaReceiver: "jacob", channel: "watercooler")]
+        let expectedHistory = [KarmaSlackHistory(id: 1, karmaCount: 2, karmaReceiver: "allen", karmaSender: "jacob", inChannel: "watercooler"),
+                               KarmaSlackHistory(id: 2, karmaCount: 1, karmaReceiver: "jacob", karmaSender: "allen", inChannel: "watercooler")]
         testHistoryRepository.multiHistory = expectedHistory
 
         let request = emptyRequest(using: app)
@@ -102,7 +102,7 @@ final class KarmaControllerTests: XCTestCase {
     }
 
     func testThatItCreatesAHistory() {
-        let expectedHistory = KarmaSlackHistory(id: 1, karmaCount: 2, fromUser: "jacob", karmaReceiver: "allen", channel: "watercooler")
+        let expectedHistory = KarmaSlackHistory(id: 1, karmaCount: 2, karmaReceiver: "allen", karmaSender: "jacob", inChannel: "watercooler")
 
         let request = emptyRequest(using: app)
         do {
@@ -174,7 +174,7 @@ final class KarmaControllerTests: XCTestCase {
         let incomingMessage = SlackKitIncomingMessage(messageText: "text", channelId: "channelId", sender: "jacob", timestamp: "timestamp")
 
         let adjustment = KarmaAdjustment(user: "allen", count: -3)
-        let status = KarmaStatus(id: "allen", count: -3, type: .user)
+        let status = KarmaStatus(id: "allen", count: -3, type: KarmaStatusType.user.rawValue)
         let expectedSlackMessage = KarmaStatusResponse(forKarmaAdjustingMessage: incomingMessage, receivedKarma: adjustment, statusAfterChange: status)
 
         testSlack.sendMessageHandler = { message in
@@ -193,8 +193,8 @@ final class KarmaControllerTests: XCTestCase {
         let incomingMessage = SlackKitIncomingMessage(messageText: "text", channelId: "channelId", sender: "jacob", timestamp: "timestamp")
 
         let adjustment = KarmaAdjustment(user: "allen", count: 3)
-        let originalStatus = KarmaStatus(id: "allen", count: -1, type: .user)
-        let changedStatus = KarmaStatus(id: "allen", count: 2, type: .user)
+        let originalStatus = KarmaStatus(id: "allen", count: -1, type: KarmaStatusType.user.rawValue)
+        let changedStatus = KarmaStatus(id: "allen", count: 2, type: KarmaStatusType.user.rawValue)
         let expectedSlackMessage = KarmaStatusResponse(forKarmaAdjustingMessage: incomingMessage, receivedKarma: adjustment, statusAfterChange: changedStatus)
 
         testSlack.sendMessageHandler = { message in
@@ -215,8 +215,8 @@ final class KarmaControllerTests: XCTestCase {
 
         let allenAdjustment = KarmaAdjustment(user: "allen", count: 3)
         let ryanAdjustment = KarmaAdjustment(user: "ryan", count: 2)
-        let allenStatus = KarmaStatus(id: "allen", count: 3, type: .user)
-        let ryanStatus = KarmaStatus(id: "ryan", count: 2, type: .user)
+        let allenStatus = KarmaStatus(id: "allen", count: 3, type: KarmaStatusType.user.rawValue)
+        let ryanStatus = KarmaStatus(id: "ryan", count: 2, type: KarmaStatusType.user.rawValue)
 
         let expectedAllenMessage = KarmaStatusResponse(forKarmaAdjustingMessage: incomingMessage, receivedKarma: allenAdjustment, statusAfterChange: allenStatus)
         let expectedRyanMessage = KarmaStatusResponse(forKarmaAdjustingMessage: incomingMessage, receivedKarma: ryanAdjustment, statusAfterChange: ryanStatus)

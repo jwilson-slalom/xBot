@@ -9,7 +9,7 @@
 import Vapor
 import XCTest
 
-final class TestStatusRepository: KarmaStatusRepository {
+final class TestStatusRepository: KarmaStatusRepo {
 
     private let group: MultiThreadedEventLoopGroup
 

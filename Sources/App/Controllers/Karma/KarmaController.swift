@@ -10,8 +10,8 @@ final class KarmaController {
     let log: Logger
     let secrets: Secrets
 
-    init(karmaStatusRepository: KarmaStatusRepository,
-         karmaHistoryRepository: KarmaSlackHistoryRepository,
+    init(karmaStatusRepository: KarmaStatusRepo,
+         karmaHistoryRepository: KarmaSlackHistoryRepo,
          karmaParser: KarmaParser,
          slack: SlackMessageSender,
          log: Logger,
