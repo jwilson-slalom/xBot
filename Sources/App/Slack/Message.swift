@@ -50,6 +50,18 @@ class SlackKitIncomingMessage: SlackKitMessage {
 
         super.init(text: messageText, channelID: .init(id: channelID), parent: event.message?.threadTs)
     }
+
+    public init(messageText: String,
+                channelId: String,
+                sender: String,
+                timestamp: String) {
+
+
+        self.sender = sender
+        self.timestamp = timestamp
+
+        super.init(text: messageText, channelID: .init(id: channelId))
+    }
 }
 
 class SlackKitResponse: SlackKitMessage {
@@ -71,5 +83,14 @@ class SlackKitResponse: SlackKitMessage {
         } else {
             super.init(text: text, channelID: incomingMessage.channelID, parent: incomingMessage.timestamp)
         }
+    }
+}
+
+extension SlackKitResponse: Equatable {
+    static func == (lhs: SlackKitResponse, rhs: SlackKitResponse) -> Bool {
+        return lhs.text == rhs.text &&
+                lhs.parent == rhs.parent &&
+                lhs.channelID == rhs.channelID// &&
+                //lhs.attachments == rhs.attachments
     }
 }

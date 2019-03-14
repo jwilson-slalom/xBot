@@ -5,20 +5,21 @@ final class KarmaController {
 
     let karmaStatusRepository: KarmaStatusRepo
     let karmaHistoryRepository: KarmaSlackHistoryRepo
-    let slack: Slack
+    let karmaParser: KarmaParser
+    let slack: SlackMessageSender
     let log: Logger
     let secrets: Secrets
 
-    let karmaParser = KarmaParser()
-
-    init(karmaStatusRepository: KarmaStatusRepo,
-         karmaHistoryRepository: KarmaSlackHistoryRepo,
-         slack: Slack,
+    init(karmaStatusRepository: KarmaStatusRepository,
+         karmaHistoryRepository: KarmaSlackHistoryRepository,
+         karmaParser: KarmaParser,
+         slack: SlackMessageSender,
          log: Logger,
          secrets: Secrets) {
 
         self.karmaStatusRepository = karmaStatusRepository
         self.karmaHistoryRepository = karmaHistoryRepository
+        self.karmaParser = karmaParser
         self.slack = slack
         self.log = log
         self.secrets = secrets
@@ -38,17 +39,11 @@ extension KarmaController: RouteCollection {
 
 extension KarmaController: ServiceType {
     static func makeService(for container: Container) throws -> KarmaController {
-        let slack = try container.make(Slack.self)
-        let karmaController = KarmaController(karmaStatusRepository: try container.make(),
-                                              karmaHistoryRepository: try container.make(),
-                                              slack: slack,
-                                              log: try container.make(),
-                                              secrets: try container.make())
-
-        slack.register(responder: karmaController, on: container)
-
-        return karmaController
+        return KarmaController(karmaStatusRepository: try container.make(),
+                               karmaHistoryRepository: try container.make(),
+                               karmaParser: KarmaMessageParser(),
+                               slack: try container.make(),
+                               log: try container.make(),
+                               secrets: try container.make())
     }
 }
-
-

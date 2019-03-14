@@ -47,5 +47,6 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     services.register(KarmaController.self)
     services.register(try Secrets.detect(), as: Secrets.self)
     services.register(Slack.self)
-    services.register(SlackListener.self)
+
+    try services.register(SlackListenerProvider())
 }
