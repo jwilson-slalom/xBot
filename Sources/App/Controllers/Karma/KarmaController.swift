@@ -39,20 +39,11 @@ extension KarmaController: RouteCollection {
 
 extension KarmaController: ServiceType {
     static func makeService(for container: Container) throws -> KarmaController {
-        let slack = try container.make(SlackMessageSender.self)
-        let karmaController = KarmaController(karmaStatusRepository: try container.make(),
-                                              karmaHistoryRepository: try container.make(),
-                                              karmaParser: KarmaMessageParser(),
-                                              slack: slack,
-                                              log: try container.make(),
-                                              secrets: try container.make())
-
-        if let slack = slack as? Slack {
-            slack.register(responder: karmaController, on: container)
-        }
-
-        return karmaController
+        return KarmaController(karmaStatusRepository: try container.make(),
+                               karmaHistoryRepository: try container.make(),
+                               karmaParser: KarmaMessageParser(),
+                               slack: try container.make(),
+                               log: try container.make(),
+                               secrets: try container.make())
     }
 }
-
-

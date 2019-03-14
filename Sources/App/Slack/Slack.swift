@@ -15,21 +15,11 @@ protocol SlackMessageSender {
 
 struct Slack: SlackMessageSender {
     private let slackKit = SlackKit()
-    private let listener: SlackListener
     private let log: Logger
 
-    public var botUser: User? {
-        return listener.botUser
-    }
-
-    init(secrets: Secrets, listener: SlackListener, logger: Logger) {
-        self.listener = listener
+    init(secrets: Secrets, logger: Logger) {
         self.log = logger
         slackKit.addWebAPIAccessWithToken(secrets.slackAppBotUserAPI)
-    }
-
-    func register(responder: SlackResponder, on worker: Worker) {
-        listener.register(responder: responder, on: worker)
     }
 
     func send(message: SlackKitSendable) throws {
@@ -82,7 +72,6 @@ extension Slack: ServiceType {
 
     static func makeService(for container: Container) throws -> Slack {
         return Slack(secrets: try container.make(),
-                     listener: try container.make(),
                      logger: try container.make())
     }
 }
