@@ -7,6 +7,7 @@
 
 @testable import App
 import Vapor
+import struct SlackKit.User
 import XCTest
 
 final class KarmaControllerTests: XCTestCase {
@@ -163,7 +164,7 @@ final class KarmaControllerTests: XCTestCase {
         testKarmaParser.karmaAdjustments = [KarmaAdjustment(user: "jacob", count: 3)]
 
         do {
-            try controller.handle(incomingMessage: incomingMessage)
+            try controller.handle(incomingMessage: incomingMessage, forBotUser: botUser())
         } catch {
             XCTFail(error.localizedDescription)
         }
@@ -182,7 +183,7 @@ final class KarmaControllerTests: XCTestCase {
         testKarmaParser.karmaAdjustments = [adjustment]
 
         do {
-            try controller.handle(incomingMessage: incomingMessage)
+            try controller.handle(incomingMessage: incomingMessage, forBotUser: botUser())
         } catch {
             XCTFail(error.localizedDescription)
         }
@@ -203,7 +204,7 @@ final class KarmaControllerTests: XCTestCase {
         testStatusRepository.status = originalStatus
 
         do {
-            try controller.handle(incomingMessage: incomingMessage)
+            try controller.handle(incomingMessage: incomingMessage, forBotUser: botUser())
         } catch {
             XCTFail(error.localizedDescription)
         }
@@ -227,7 +228,7 @@ final class KarmaControllerTests: XCTestCase {
         testKarmaParser.karmaAdjustments = [allenAdjustment, ryanAdjustment]
 
         do {
-            try controller.handle(incomingMessage: incomingMessage)
+            try controller.handle(incomingMessage: incomingMessage, forBotUser: botUser())
         } catch {
             XCTFail(error.localizedDescription)
         }
@@ -249,7 +250,7 @@ final class KarmaControllerTests: XCTestCase {
         testStatusRepository.error = .badRepo
 
         do {
-            try controller.handle(incomingMessage: incomingMessage)
+            try controller.handle(incomingMessage: incomingMessage, forBotUser: botUser())
         } catch {
             XCTFail(error.localizedDescription)
         }
@@ -270,6 +271,10 @@ extension KarmaControllerTests {
                        channel_name: nil,
                        user_id: nil,
                        user_name: nil)
+    }
+
+    func botUser() -> User {
+        return User(id: "xBot")
     }
 }
 

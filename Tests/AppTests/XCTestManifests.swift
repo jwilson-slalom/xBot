@@ -4,10 +4,10 @@ extension KarmaControllerTests {
     static let __allTests = [
         ("testThatItCreatesAHistory", testThatItCreatesAHistory),
         ("testThatItCreatesAStatus", testThatItCreatesAStatus),
+        ("testThatItDoesNotAllowAUserToAdjustKarmaForSelf", testThatItDoesNotAllowAUserToAdjustKarmaForSelf),
         ("testThatItFailsACommandRequestItCantValidate", testThatItFailsACommandRequestItCantValidate),
         ("testThatItFailsACommandRequestWhenNoResponseUrl", testThatItFailsACommandRequestWhenNoResponseUrl),
         ("testThatItHandlesMultipleSlackResponsesFromMultipleAdjustmentMessages", testThatItHandlesMultipleSlackResponsesFromMultipleAdjustmentMessages),
-        ("testThatItHandlesWhenUserTriesToAdjustThemselves", testThatItHandlesWhenUserTriesToAdjustThemselves),
         ("testThatItHandlesWhenValidAdjustmentMessageWithExistingStatus", testThatItHandlesWhenValidAdjustmentMessageWithExistingStatus),
         ("testThatItHandlesWhenValidAdjustmentMessageWithNoExistingStatus", testThatItHandlesWhenValidAdjustmentMessageWithNoExistingStatus),
         ("testThatItReturnsAllHistoryObjects", testThatItReturnsAllHistoryObjects),
