@@ -9,7 +9,7 @@
 import Vapor
 import XCTest
 
-final class TestHistoryRepository: KarmaSlackHistoryRepository {
+final class TestHistoryRepository: KarmaSlackHistoryRepo {
 
     private let group: MultiThreadedEventLoopGroup
 

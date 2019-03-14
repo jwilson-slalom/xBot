@@ -6,29 +6,29 @@
 //
 
 import Foundation
-import FluentSQLite
+import FluentPostgreSQL
 import Vapor
 
 /// Captures a karma interaction from Slack
-final class KarmaSlackHistory: SQLiteModel {
+final class KarmaSlackHistory: PostgreSQLModel {
     var id: Int?
 
     var karmaCount: Int
-    var fromUser: String
     var karmaReceiver: String
-    var channel: String
+    var karmaSender: String
+    var inChannel: String
 
     init(id: Int? = nil,
          karmaCount: Int,
-         fromUser: String,
          karmaReceiver: String,
-         channel: String) {
+         karmaSender: String,
+         inChannel: String) {
 
         self.id = id
         self.karmaCount = karmaCount
-        self.fromUser = fromUser
         self.karmaReceiver = karmaReceiver
-        self.channel = channel
+        self.karmaSender = karmaSender
+        self.inChannel = inChannel
     }
 }
 
@@ -45,9 +45,9 @@ extension KarmaSlackHistory: Equatable {
     static func == (lhs: KarmaSlackHistory, rhs: KarmaSlackHistory) -> Bool {
         return lhs.id == rhs.id &&
                 lhs.karmaCount == rhs.karmaCount &&
-                lhs.fromUser == rhs.fromUser &&
                 lhs.karmaReceiver == rhs.karmaReceiver &&
-                lhs.channel == rhs.channel
+                lhs.karmaSender == rhs.karmaSender &&
+                lhs.inChannel == rhs.inChannel
     }
 }
 

@@ -7,9 +7,9 @@
 
 import Vapor
 import Fluent
-import FluentSQLite
+import FluentPostgreSQL
 
-protocol KarmaStatusRepository: ServiceType {
+protocol KarmaStatusRepo: ServiceType {
     func all() -> Future<[KarmaStatus]>
     func save(karma: KarmaStatus) -> Future<KarmaStatus>
     func find(id: String) -> Future<KarmaStatus?>
@@ -21,11 +21,11 @@ extension Database {
     public typealias ConnectionPool = DatabaseConnectionPool<ConfiguredDatabase<Self>>
 }
 
-final class SQLiteKarmaStatusRepository: KarmaStatusRepository {
+final class KarmaStatusRepository: KarmaStatusRepo {
 
-    let db: SQLiteDatabase.ConnectionPool
+    let db: PostgreSQLDatabase.ConnectionPool
 
-    init(_ db: SQLiteDatabase.ConnectionPool) {
+    init(_ db: PostgreSQLDatabase.ConnectionPool) {
         self.db = db
     }
 
@@ -63,10 +63,10 @@ final class SQLiteKarmaStatusRepository: KarmaStatusRepository {
 }
 
 //MARK: - ServiceType conformance
-extension SQLiteKarmaStatusRepository {
-    static let serviceSupports: [Any.Type] = [KarmaStatusRepository.self]
+extension KarmaStatusRepository {
+    static let serviceSupports: [Any.Type] = [KarmaStatusRepo.self]
 
-    static func makeService(for worker: Container) throws -> SQLiteKarmaStatusRepository {
-        return .init(try worker.connectionPool(to: .sqlite))
+    static func makeService(for worker: Container) throws -> KarmaStatusRepository {
+        return .init(try worker.connectionPool(to: .psql))
     }
 }
