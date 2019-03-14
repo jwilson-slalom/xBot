@@ -40,3 +40,14 @@ extension KarmaSlackHistory: Content { }
 
 /// Allows `HistoricalKarma` to be used as a dynamic parameter in route definitions.
 extension KarmaSlackHistory: Parameter { }
+
+extension KarmaSlackHistory: Equatable {
+    static func == (lhs: KarmaSlackHistory, rhs: KarmaSlackHistory) -> Bool {
+        return lhs.id == rhs.id &&
+                lhs.karmaCount == rhs.karmaCount &&
+                lhs.fromUser == rhs.fromUser &&
+                lhs.karmaReceiver == rhs.karmaReceiver &&
+                lhs.channel == rhs.channel
+    }
+}
+

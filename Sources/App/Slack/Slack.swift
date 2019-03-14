@@ -8,14 +8,14 @@
 import SlackKit
 import Vapor
 
-struct Slack: ServiceType {
+protocol SlackMessageSender {
+    func send(message: SlackKitSendable) throws
+    func send(message: SlackKitSendable, onlyVisibleTo user: String) throws
+}
+
+struct Slack: SlackMessageSender {
     private let slackKit = SlackKit()
     private let log: Logger
-
-    static func makeService(for container: Container) throws -> Slack {
-        return Slack(secrets: try container.make(),
-                     logger: try container.make())
-    }
 
     init(secrets: Secrets, logger: Logger) {
         self.log = logger
@@ -64,5 +64,14 @@ struct Slack: ServiceType {
                 self.log.error("Sending ephemeral slack message encounted error: \(error)")
             })
         }
+    }
+}
+
+extension Slack: ServiceType {
+    static let serviceSupports: [Any.Type] = [SlackMessageSender.self]
+
+    static func makeService(for container: Container) throws -> Slack {
+        return Slack(secrets: try container.make(),
+                     logger: try container.make())
     }
 }

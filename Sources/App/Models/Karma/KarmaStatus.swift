@@ -32,6 +32,12 @@ extension KarmaStatus: Content { }
 /// Allows `KarmaStatus` to be used as a dynamic parameter in route definitions.
 extension KarmaStatus: Parameter { }
 
+extension KarmaStatus: Equatable {
+    static func == (lhs: KarmaStatus, rhs: KarmaStatus) -> Bool {
+        return lhs.id == rhs.id && lhs.count == lhs.count && lhs.type == rhs.type
+    }
+}
+
 enum StatusType: String, Content {
     case user = "USER"
     case other = "OTHER"

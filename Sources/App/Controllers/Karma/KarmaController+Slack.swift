@@ -57,7 +57,7 @@ extension KarmaController {
                 }
             }.catch {
                 self.log.error("Failed to respond to Slack slash command \($0)")
-        }
+            }
     }
 
     private func formatter(for command: Command, karma: [KarmaStatus]) -> KarmaStatusResponse {
@@ -84,7 +84,7 @@ extension KarmaController: SlackResponder {
         try karmaChanges.forEach { change in
 
             guard change.user != incomingMessage.sender else {
-                let errorMessage = "You can't adjust karma for yourself! "
+                let errorMessage = "You can't adjust karma for yourself!"
                 try slack.send(message: SlackKitResponse(to: incomingMessage, text: errorMessage), onlyVisibleTo: incomingMessage.sender)
                 return
             }

@@ -7,7 +7,12 @@
 
 import Vapor
 
-final class KarmaParser {
+protocol KarmaParser {
+    func karmaAdjustments(from message: String) -> [KarmaAdjustment]
+    func userIds(from message: String) -> [String]
+}
+
+final class KarmaMessageParser: KarmaParser {
 
     private static let karmaString = """
                     <@([\\w]{9}) (?# capture userId)
