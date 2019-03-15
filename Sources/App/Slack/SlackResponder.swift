@@ -9,10 +9,12 @@ import SlackKit
 
 protocol SlackResponder {
     func handle(incomingMessage: SlackKitIncomingMessage, forBotUser botUser: User) throws
+    func handle(botRequest: BotCommand, forBotUser: User) throws
     func handle(event: Event, ofType type: EventType, forBotUser botUser: User) throws
 }
 
 extension SlackResponder {
     func handle(incomingMessage: SlackKitIncomingMessage, forBotUser botUser: User) throws { }
     func handle(event: Event, ofType type: EventType, forBotUser botUser: User) throws { }
+    func handle(botRequest: BotCommand, forBotUser: User) throws { }
 }
