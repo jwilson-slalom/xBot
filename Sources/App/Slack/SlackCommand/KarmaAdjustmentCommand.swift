@@ -12,12 +12,14 @@ struct KarmaAdjustmentCommand: SlackCommand {
     let adjustments: [KarmaAdjustment]
 }
 
+extension KarmaAdjustmentCommand: Equatable { }
+
 class KarmaAdjustmentResponder: SlackCommandResponder {
     private var completion: ((KarmaAdjustmentCommand, User) throws -> Void)?
     private let karmaParser: KarmaParser
 
-    init() {
-        karmaParser = KarmaMessageParser()
+    init(karmaParser: KarmaParser = KarmaMessageParser()) {
+        self.karmaParser = karmaParser
     }
 
     func handle(incomingMessage: SlackKitIncomingMessage, botUser: User) throws {
