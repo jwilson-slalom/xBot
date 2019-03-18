@@ -10,7 +10,7 @@ import struct SlackKit.User
 
 extension KarmaController: CommandCollection {
     func boot(router: SlackRouter) throws {
-        router.registerCommand(for: [.message], commandGenerator: KarmaAdjustmentCommandGenerator(), use: handleKarmaAdjustmentCommand)
+        router.registerCommandResponder(for: [.message], responder: KarmaAdjustmentResponder(), use: handleKarmaAdjustmentCommand)
     }
 }
 

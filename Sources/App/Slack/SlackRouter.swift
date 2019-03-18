@@ -8,9 +8,13 @@
 import SlackKit
 import Vapor
 
+protocol CommandCollection {
+    func boot(router: SlackRouter) throws
+}
+
 protocol SlackRouter: SlackResponder {
     func register(responder: SlackResponder, for eventTypes: [EventType])
-    func registerCommand<C>(for eventTypes: [EventType], commandGenerator: CommandGenerator, use handler: @escaping (C, User) throws -> Void)
+    func registerCommandResponder<C>(for eventTypes: [EventType], responder: SlackCommandResponder, use completion: @escaping (C, User) throws -> Void)
 }
 
 extension SlackRouter {
@@ -19,17 +23,13 @@ extension SlackRouter {
     }
 }
 
-protocol CommandCollection {
-    func boot(router: SlackRouter) throws
-}
-
 // Currently we don't support any registration of more specific routes,
 // everyone gets everything. In the future, a proper Route type should be developed
 // to provide the router with enough information to decide who to actually deliver things to
 public final class StandardSlackRouter: Service, SlackRouter {
 
     private var responders = [EventType: [SlackResponder]]()
-    private var commandGenerators = [EventType: [CommandGenerator]]()
+    private var commandResponders = [EventType: [SlackCommandResponder]]()
 
     func register(responder: SlackResponder, for eventTypes: [EventType]) {
         eventTypes.forEach {
@@ -39,25 +39,23 @@ public final class StandardSlackRouter: Service, SlackRouter {
         }
     }
 
-    func registerCommand<C>(for eventTypes: [EventType], commandGenerator: CommandGenerator, use handler: @escaping (C, User) throws -> Void) {
+    func registerCommandResponder<C>(for eventTypes: [EventType], responder: SlackCommandResponder, use completion: @escaping (C, User) throws -> Void) {
         eventTypes.forEach {
-            var generatorsForType = commandGenerators[$0] ?? []
+            var respondersForType = commandResponders[$0] ?? []
 
-            guard commandGenerator.register(handler: handler) else {
+            guard responder.register(completion: completion) else {
                 return
             }
 
-            generatorsForType.append(commandGenerator)
-            commandGenerators[$0] = generatorsForType
+            respondersForType.append(responder)
+            commandResponders[$0] = respondersForType
         }
     }
 
     func handle(event: Event, ofType type: EventType, forBotUser botUser: User) throws {
 
         if type == .message, let message = SlackKitIncomingMessage(event: event) {
-            try commandGenerators[.message]?.forEach { generator in
-                try generator.handle(incomingMessage: message, botUser: botUser)
-            }
+            try commandResponders[.message]?.forEach { try $0.handle(incomingMessage: message, botUser: botUser) }
 
             try responders[.message]?.forEach { try $0.handle(incomingMessage: message, forBotUser: botUser) }
             return
