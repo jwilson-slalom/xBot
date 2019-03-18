@@ -8,37 +8,19 @@
 import SlackKit
 import Vapor
 
-/// `shadow` protocol
-protocol AnyCommandResponder {
-    func respond(to command: Any, user: User) throws
-}
-/// `BotCommandGenerator` To be shadowed.
-protocol BotCommandResponder: AnyCommandResponder {
-    associatedtype Command
-
-    func respond(to command: Command, user: User) throws
-}
-/// `extension` to conform to `TableRow`
-extension AnyCommandResponder {
-    func respond(to command: Any, user: User) throws {
-        fatalError()
-    }
-}
-struct BasicCommandResponder<Command>: BotCommandResponder {
-    private let closure: (Command, User) throws -> Void
-
-    public init(closure: @escaping (Command, User) throws -> Void) {
-        self.closure = closure
-    }
-
-    func respond(to command: Command, user: User) throws {
-        try closure(command, user)
-    }
-}
-
 protocol SlackRouter: SlackResponder {
     func register(responder: SlackResponder, for eventTypes: [EventType])
-    func registerHandler<C>(handler: @escaping (C, User) throws -> Void, for eventTypes: [EventType])
+    func registerCommand<C>(for eventTypes: [EventType], commandGenerator: CommandGenerator, use handler: @escaping (C, User) throws -> Void)
+}
+
+extension SlackRouter {
+    public func register(collection: CommandCollection) throws {
+        try collection.boot(router: self)
+    }
+}
+
+protocol CommandCollection {
+    func boot(router: SlackRouter) throws
 }
 
 // Currently we don't support any registration of more specific routes,
@@ -47,9 +29,8 @@ protocol SlackRouter: SlackResponder {
 public final class StandardSlackRouter: Service, SlackRouter {
 
     private var responders = [EventType: [SlackResponder]]()
-    private var commandResponders = [EventType: [AnyCommandResponder]]()
-    private let commandGenerators: [AnyCommandGenerator] = [KarmaAdjustmentCommandGenerator(),
-                                                            OtherCommandGenerator()]
+    private var commandGenerators = [EventType: [CommandGenerator]]()
+
     func register(responder: SlackResponder, for eventTypes: [EventType]) {
         eventTypes.forEach {
             var respondersForType = responders[$0] ?? []
@@ -58,39 +39,24 @@ public final class StandardSlackRouter: Service, SlackRouter {
         }
     }
 
-    func registerHandler<C>(handler: @escaping (C, User) throws -> Void, for eventTypes: [EventType]) {
+    func registerCommand<C>(for eventTypes: [EventType], commandGenerator: CommandGenerator, use handler: @escaping (C, User) throws -> Void) {
         eventTypes.forEach {
-            var commandRespondersForType = commandResponders[$0] ?? []
-            let responder = BasicCommandResponder<C>(closure: handler)
-            commandRespondersForType.append(responder)
-            commandResponders[$0] = commandRespondersForType
+            var generatorsForType = commandGenerators[$0] ?? []
+
+            guard commandGenerator.register(handler: handler) else {
+                return
+            }
+
+            generatorsForType.append(commandGenerator)
+            commandGenerators[$0] = generatorsForType
         }
     }
 
     func handle(event: Event, ofType type: EventType, forBotUser botUser: User) throws {
 
         if type == .message, let message = SlackKitIncomingMessage(event: event) {
-
-            try commandGenerators.forEach { generator in
-                if let gen = generator as? KarmaAdjustmentCommandGenerator,
-                    let command = gen.commandFrom(incomingMessage: message) {
-
-                    try commandResponders[.message]?.forEach { res in
-                        if let responder = res as? BasicCommandResponder<KarmaAdjustmentCommand> {
-                            try responder.respond(to: command, user: botUser)
-                        }
-                        if let responder = res as? BasicCommandResponder<OtherCommand> {
-                            try responder.respond(to: command, user: botUser)
-                        }
-                    }
-                }
-                if let gen = generator as? OtherCommandGenerator,
-                    let command = gen.commandFrom(incomingMessage: message) {
-
-                    try commandResponders[.message]?.forEach {
-                        try $0.respond(to: command, user: botUser)
-                    }
-                }
+            try commandGenerators[.message]?.forEach { generator in
+                try generator.handle(incomingMessage: message, botUser: botUser)
             }
 
             try responders[.message]?.forEach { try $0.handle(incomingMessage: message, forBotUser: botUser) }

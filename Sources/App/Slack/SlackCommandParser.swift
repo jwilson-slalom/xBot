@@ -5,74 +5,80 @@
 //  Created by Jacob Wilson on 3/14/19.
 //
 
+import SlackKit
+
 protocol BotCommand {
-    var type: BotCommandType { get }
     var incomingMessage: SlackKitIncomingMessage { get }
 }
 
-/// `shadow` protocol
-protocol AnyCommandGenerator {
-    func commandFrom(incomingMessage: SlackKitIncomingMessage) -> Any?
-}
-/// `BotCommandGenerator` To be shadowed.
-protocol BotCommandGenerator: AnyCommandGenerator {
-    associatedtype Command
-
-    func commandFrom(incomingMessage: SlackKitIncomingMessage) -> Command?
-}
-/// `extension` to conform to `TableRow`
-extension AnyCommandGenerator {
-    func commandFrom(incomingMessage: SlackKitIncomingMessage) -> Any? {
-        return nil
-    }
+protocol CommandGenerator {
+    func handle(incomingMessage: SlackKitIncomingMessage, botUser: User) throws
+    func register<C>(handler: @escaping (C, User) throws -> Void) -> Bool
 }
 
-struct KarmaAdjustmentCommandGenerator: BotCommandGenerator {
-    typealias Command = KarmaAdjustmentCommand
-
-    let karmaParser: KarmaParser
+class KarmaAdjustmentCommandGenerator: CommandGenerator {
+    private var handler: ((KarmaAdjustmentCommand, User) throws -> Void)?
+    private let karmaParser: KarmaParser
 
     init() {
         karmaParser = KarmaMessageParser()
     }
 
-    func commandFrom(incomingMessage: SlackKitIncomingMessage) -> KarmaAdjustmentCommand? {
+    func handle(incomingMessage: SlackKitIncomingMessage, botUser: User) throws {
         let karmaAdjustments = karmaParser.karmaAdjustments(from: incomingMessage.text)
 
         guard !karmaAdjustments.isEmpty else {
-            return nil
+            return
         }
 
-        return KarmaAdjustmentCommand(incomingMessage: incomingMessage, adjustments: karmaAdjustments)
+        let command = KarmaAdjustmentCommand(incomingMessage: incomingMessage, adjustments: karmaAdjustments)
+
+        try handler?(command, botUser)
+    }
+
+    func register<C>(handler: @escaping (C, User) throws -> Void) -> Bool {
+        guard let handler = handler as? (KarmaAdjustmentCommand, User) throws -> Void else {
+            return false
+        }
+        self.handler = handler
+        return true
     }
 }
 
-struct OtherCommandGenerator: BotCommandGenerator {
-    typealias Command = OtherCommand
+class OtherCommandGenerator: CommandGenerator {
+    private var handler: ((OtherCommand, User) throws -> Void)?
 
-    func commandFrom(incomingMessage: SlackKitIncomingMessage) -> OtherCommand? {
+    func handle(incomingMessage: SlackKitIncomingMessage, botUser: User) throws {
         guard incomingMessage.text == "other" else {
-            return nil
+            return
         }
 
-        return OtherCommand(incomingMessage: incomingMessage)
+        let command = OtherCommand(incomingMessage: incomingMessage)
+
+        try handler?(command, botUser)
+    }
+
+    func register<C>(handler: @escaping (C, User) throws -> Void) -> Bool {
+        guard let handler = handler as? (OtherCommand, User) throws -> Void else {
+            return false
+        }
+        self.handler = handler
+        return true
     }
 }
 
 struct KarmaAdjustmentCommand: BotCommand {
-    let type: BotCommandType = .karmaAdjustments
     let incomingMessage: SlackKitIncomingMessage
     let adjustments: [KarmaAdjustment]
 }
 
 struct OtherCommand: BotCommand {
-    let type: BotCommandType = .currentKarmaStatus
     let incomingMessage: SlackKitIncomingMessage
 }
 
-enum BotCommandType {
-    case karmaAdjustments
-    case currentKarmaStatus
-    case karmaLeaderboard
-    case currentBeers
-}
+//enum BotCommandType {
+//    case karmaAdjustments
+//    case currentKarmaStatus
+//    case karmaLeaderboard
+//    case currentBeers
+//}
