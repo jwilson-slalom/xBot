@@ -175,6 +175,45 @@ final class KarmaMessageParserTests: XCTestCase {
         XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
     }
 
+    func testThatItParsesUserId() {
+        let expectedUserIds = ["U12345678"]
+
+        testMessage = "<@U12345678|jacob>"
+        XCTAssertEqual(parser.userIds(from: testMessage), expectedUserIds)
+
+        testMessage = "<@U12345678> adfsdf"
+        XCTAssertEqual(parser.userIds(from: testMessage), expectedUserIds)
+
+        testMessage = " asdfsdf  <@U12345678>  safdsf  sadf"
+        XCTAssertEqual(parser.userIds(from: testMessage), expectedUserIds)
+    }
+
+    func testThatItParsesMultipleUserIds() {
+        let expectedUserIds = ["U12345678", "U98765432"]
+
+        testMessage = "<@U12345678|jacob><@U98765432>"
+        XCTAssertEqual(parser.userIds(from: testMessage), expectedUserIds)
+
+        testMessage = "other stuff <@U12345678> adfsdf ++ <@U98765432|someoneelse>"
+        XCTAssertEqual(parser.userIds(from: testMessage), expectedUserIds)
+
+        testMessage = "<@U12345678>      <@U98765432>"
+        XCTAssertEqual(parser.userIds(from: testMessage), expectedUserIds)
+    }
+
+    func testThatItDoesNotParseUserIds() {
+        let expectedUserIds = [String]()
+
+        testMessage = "<@U1234567|jacob><@U98765432|>"
+        XCTAssertEqual(parser.userIds(from: testMessage), expectedUserIds)
+
+        testMessage = "<U12345678>"
+        XCTAssertEqual(parser.userIds(from: testMessage), expectedUserIds)
+
+        testMessage = " some other words <U12345678>"
+        XCTAssertEqual(parser.userIds(from: testMessage), expectedUserIds)
+    }
+
     func testThatItParsesMentionedUserIdFromKarmaStatusMessage() {
         let expectedMentionedId = "U12345678"
 

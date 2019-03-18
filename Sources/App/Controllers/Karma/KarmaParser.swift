@@ -33,7 +33,6 @@ final class KarmaMessageParser: KarmaParser {
                     \\s+status\\s+  (?# require status after)
                     """
 
-
     let karmaAdjustmentRegex = try! NSRegularExpression(pattern: karmaAdjustmentString, options: .allowCommentsAndWhitespace)
     let karmaStatusRegex = try! NSRegularExpression(pattern: karmaStatusBeginningString, options: [.allowCommentsAndWhitespace, .caseInsensitive])
     let userRegex = try! NSRegularExpression(pattern: userString, options: .allowCommentsAndWhitespace)
