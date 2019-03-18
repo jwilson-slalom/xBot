@@ -76,8 +76,8 @@ extension KarmaController {
     }
 }
 
-extension KarmaController: SlackResponder {
-
+// MARK: Command Handling
+extension KarmaController {
     func handleKarmaAdjustmentCommand(karmaAdjustmentCommand: KarmaAdjustmentCommand, forBotUser: User) throws {
         let incomingMessage = karmaAdjustmentCommand.incomingMessage
         let slack = self.slack
