@@ -174,4 +174,35 @@ final class KarmaMessageParserTests: XCTestCase {
         testMessage = "<@U12345678>------"
         XCTAssertEqual(parser.karmaAdjustments(from: testMessage), expectedKarmaMessages)
     }
+
+    func testThatItParsesMentionedUserIdFromKarmaStatusMessage() {
+        let expectedMentionedId = "U12345678"
+
+        testMessage = "<@U12345678> status dasfsdfas asdfsdff"
+        guard let mentionedUserId = parser.karmaStatusMentionedUserId(from: testMessage) else {
+            return XCTFail("mentionedUserId should not be nil")
+        }
+        XCTAssertEqual(mentionedUserId, expectedMentionedId)
+
+        testMessage = "     <@U12345678|jacob>    status      <U98765432>"
+        guard let mentionedUserId2 = parser.karmaStatusMentionedUserId(from: testMessage) else {
+            return XCTFail("mentionedUserId2 should not be nil")
+        }
+        XCTAssertEqual(mentionedUserId2, expectedMentionedId)
+    }
+
+    func testThatItFailsToParseMentionedUserIdFromKarmaStatusMessage() {
+
+        testMessage = "something <@U12345678> status dasfsdfas asdfsdff"
+        XCTAssertNil(parser.karmaStatusMentionedUserId(from: testMessage))
+
+        testMessage = " <@U12345678|jacob>status      <U98765432>"
+        XCTAssertNil(parser.karmaStatusMentionedUserId(from: testMessage))
+
+        testMessage = " <@U12345678|jacob>  status<U98765432>"
+        XCTAssertNil(parser.karmaStatusMentionedUserId(from: testMessage))
+
+        testMessage = "<@U12345678|jacob> something status <U98765432>"
+        XCTAssertNil(parser.karmaStatusMentionedUserId(from: testMessage))
+    }
 }

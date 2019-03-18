@@ -11,6 +11,7 @@ import XCTest
 class TestKarmaParser: KarmaParser {
     var karmaAdjustments = [KarmaAdjustment]()
     var userIds = [String]()
+    var mentionedUserId: String?
 
     func karmaAdjustments(from message: String) -> [KarmaAdjustment] {
         return karmaAdjustments
@@ -18,5 +19,9 @@ class TestKarmaParser: KarmaParser {
 
     func userIds(from message: String) -> [String] {
         return userIds
+    }
+
+    func karmaStatusMentionedUserId(from message: String) -> String? {
+        return mentionedUserId
     }
 }
