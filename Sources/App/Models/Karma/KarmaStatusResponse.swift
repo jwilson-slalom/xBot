@@ -9,15 +9,6 @@ import Foundation
 import struct SlackKit.Attachment
 
 class KarmaStatusResponse: SlackKitResponse {
-    enum CodingKeys: String, CodingKey {
-        case text, attachments
-    }
-
-    override func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(text, forKey: .text)
-        try container.encode(attachments, forKey: .attachments)
-    }
 
     init(forKarmaStatusMessage incomingMessage: SlackKitIncomingMessage, statuses: [KarmaStatus]) {
         super.init(to: incomingMessage,
@@ -31,8 +22,9 @@ class KarmaStatusResponse: SlackKitResponse {
                    attachments: [KarmaStatusResponse.slackAttachment(with: receivedKarma, totalKarma: karmaStatus.count, userId: receivedKarma.user.asSlackUserMention())])
     }
 
-    init(forLeaderboardCommandStatuses statuses: [KarmaStatus]) {
-        super.init(to: nil, text: "Karma Leaderboard",
+    init(forKarmaLeaderboardMessage incomingMessage: SlackKitIncomingMessage, statuses: [KarmaStatus]) {
+        super.init(to: incomingMessage,
+                   text: "Karma Leaderboard",
                    attachments: [KarmaStatusResponse.slackLeaderboardAttachment(with: statuses)])
     }
 }

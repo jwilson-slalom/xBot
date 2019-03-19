@@ -12,66 +12,67 @@ extension KarmaController: CommandCollection {
     func boot(router: SlackRouter) throws {
         router.registerCommandResponder(for: [.message], responder: KarmaAdjustmentResponder(), use: handleKarmaAdjustmentCommand)
         router.registerCommandResponder(for: [.message], responder: KarmaStatusResponder(), use: handleKarmaStatusCommand)
+        router.registerCommandResponder(for: [.message], responder: KarmaLeaderboardResponder(), use: handleKarmaLeaderboardCommand)
     }
 }
 
 extension KarmaController {
-    func registerSlackRoutes(on router: Router) {
-        router.post(Command.self, at: "command", use: command)
-    }
+//    func registerSlackRoutes(on router: Router) {
+//        router.post(Command.self, at: "command", use: command)
+//    }
 
-    func command(_ req: Request, content: Command) throws -> HTTPStatus {
-        guard let responseUrl = content.response_url else {
-            return .badRequest
-        }
-        guard try req.validateSlackRequest(signingSecret: secrets.slackRequestSigningSecret) else {
-            return .unauthorized
-        }
+//    func command(_ req: Request, content: Command) throws -> HTTPStatus {
+//        guard let responseUrl = content.response_url else {
+//            return .badRequest
+//        }
+//        guard try req.validateSlackRequest(signingSecret: secrets.slackRequestSigningSecret) else {
+//            return .unauthorized
+//        }
+//
+//        // Do this in the background
+//        send(karmaStatuses: process(karmaCommand: content, on: req), to: responseUrl, with: req, command: content)
+//
+//        // Respond immediately
+//        return .ok
+//    }
 
-        // Do this in the background
-        send(karmaStatuses: process(karmaCommand: content, on: req), to: responseUrl, with: req, command: content)
+//    private func process(karmaCommand command: Command, on req: Request) -> Future<[KarmaStatus]> {
+//        let repository = karmaStatusRepository
+//
+//        switch command.command {
+//        case "/leaderboard"?:
+//            return repository.top(count: 10)
+//        default:
+//            return req.future(error: Abort(.badRequest))
+//        }
+//    }
 
-        // Respond immediately
-        return .ok
-    }
+//    private func send(karmaStatuses: Future<[KarmaStatus]>, to responseUrl: String, with req: Request, command: Command) {
+//        karmaStatuses
+//            .flatMap { karma -> Future<Response> in
+//                guard !karma.isEmpty else {
+//                    return try req.client().post(responseUrl) { beforePost in
+//                        let message = SimpleMessage(text: "Couldn't find any karma!")
+//                        try beforePost.content.encode(json: message)
+//                    }
+//                }
+//
+//                return try req.client().post(responseUrl) { beforePost in
+//                    try beforePost.content.encode(json: self.formatter(for: command, karma: karma))
+//                }
+//            }.catch {
+//                self.log.error("Failed to respond to Slack slash command \($0)")
+//            }
+//    }
 
-    private func process(karmaCommand command: Command, on req: Request) -> Future<[KarmaStatus]> {
-        let repository = karmaStatusRepository
-
-        switch command.command {
-        case "/leaderboard"?:
-            return repository.top(count: 10)
-        default:
-            return req.future(error: Abort(.badRequest))
-        }
-    }
-
-    private func send(karmaStatuses: Future<[KarmaStatus]>, to responseUrl: String, with req: Request, command: Command) {
-        karmaStatuses
-            .flatMap { karma -> Future<Response> in
-                guard !karma.isEmpty else {
-                    return try req.client().post(responseUrl) { beforePost in
-                        let message = SimpleMessage(text: "Couldn't find any karma!")
-                        try beforePost.content.encode(json: message)
-                    }
-                }
-
-                return try req.client().post(responseUrl) { beforePost in
-                    try beforePost.content.encode(json: self.formatter(for: command, karma: karma))
-                }
-            }.catch {
-                self.log.error("Failed to respond to Slack slash command \($0)")
-            }
-    }
-
-    private func formatter(for command: Command, karma: [KarmaStatus]) -> KarmaStatusResponse {
-        switch command.command {
-        case "/leaderboard"?:
-            return  KarmaStatusResponse(forLeaderboardCommandStatuses: karma)
-        default:
-            return  KarmaStatusResponse(forLeaderboardCommandStatuses: karma)
-        }
-    }
+//    private func formatter(for command: Command, karma: [KarmaStatus]) -> KarmaStatusResponse {
+//        switch command.command {
+//        case "/leaderboard"?:
+//            return  KarmaStatusResponse(forLeaderboardCommandStatuses: karma)
+//        default:
+//            return  KarmaStatusResponse(forLeaderboardCommandStatuses: karma)
+//        }
+//    }
 }
 
 // MARK: Command Handling
@@ -138,5 +139,29 @@ extension KarmaController {
             .catch {
                 self.log.error("Failed to respond to Slack slash command \($0)")
             }
+    }
+
+    func handleKarmaLeaderboardCommand(_ karmaLeaderboardCommand: KarmaLeaderboardCommand, forBotUser: User) throws {
+        let incomingMessage = karmaLeaderboardCommand.incomingMessage
+        let statusRepository = self.karmaStatusRepository
+        let slack = self.slack
+
+        statusRepository.top(count: karmaLeaderboardCommand.leaderboardCount)
+            .thenThrowing {
+                guard !$0.isEmpty else {
+                    let message = "Couldn't find any karma!"
+                    try slack.send(message: SlackKitResponse(to: incomingMessage, text: message))
+                    return
+                }
+
+                try slack.send(message: KarmaStatusResponse(forKarmaLeaderboardMessage: incomingMessage, statuses: $0))
+            }
+            .catchMap { error in
+                let errorMessage = "Something went wrong. Please try again"
+                try slack.send(message: SlackKitResponse(to: incomingMessage, text: errorMessage))
+            }
+            .catch {
+                self.log.error("Failed to respond to Slack slash command \($0)")
+        }
     }
 }
