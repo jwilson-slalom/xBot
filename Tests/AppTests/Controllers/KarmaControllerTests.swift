@@ -172,7 +172,7 @@ final class KarmaControllerTests: XCTestCase {
         }
 
         do {
-            try controller.handleKarmaAdjustmentCommand(karmaAdjustmentCommand: command, forBotUser: botUser())
+            try controller.handleKarmaAdjustmentCommand(command, forBotUser: botUser())
         } catch {
             XCTFail(error.localizedDescription)
         }
@@ -199,7 +199,7 @@ final class KarmaControllerTests: XCTestCase {
         }
 
         do {
-            try controller.handleKarmaAdjustmentCommand(karmaAdjustmentCommand: command, forBotUser: botUser())
+            try controller.handleKarmaAdjustmentCommand(command, forBotUser: botUser())
         } catch {
             XCTFail(error.localizedDescription)
         }
@@ -228,7 +228,7 @@ final class KarmaControllerTests: XCTestCase {
         testStatusRepository.status = originalStatus
 
         do {
-            try controller.handleKarmaAdjustmentCommand(karmaAdjustmentCommand: command, forBotUser: botUser())
+            try controller.handleKarmaAdjustmentCommand(command, forBotUser: botUser())
         } catch {
             XCTFail(error.localizedDescription)
         }
@@ -260,7 +260,7 @@ final class KarmaControllerTests: XCTestCase {
         }
 
         do {
-            try controller.handleKarmaAdjustmentCommand(karmaAdjustmentCommand: command, forBotUser: botUser())
+            try controller.handleKarmaAdjustmentCommand(command, forBotUser: botUser())
         } catch {
             XCTFail(error.localizedDescription)
         }
@@ -289,7 +289,7 @@ final class KarmaControllerTests: XCTestCase {
         testStatusRepository.error = .badRepo
 
         do {
-            try controller.handleKarmaAdjustmentCommand(karmaAdjustmentCommand: command, forBotUser: botUser())
+            try controller.handleKarmaAdjustmentCommand(command, forBotUser: botUser())
         } catch {
             XCTFail(error.localizedDescription)
         }

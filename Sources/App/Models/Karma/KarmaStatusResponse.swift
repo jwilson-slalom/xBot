@@ -19,8 +19,9 @@ class KarmaStatusResponse: SlackKitResponse {
         try container.encode(attachments, forKey: .attachments)
     }
 
-    init(forSlashCommandWithKarmaStatuses statuses: [KarmaStatus]) {
-        super.init(to: nil, text: "",
+    init(forKarmaStatusMessage incomingMessage: SlackKitIncomingMessage, statuses: [KarmaStatus]) {
+        super.init(to: incomingMessage,
+                   text: "",
                    attachments: statuses.map { KarmaStatusResponse.slashCommandSlackAttachment(karmaStatus: $0) })
     }
 
