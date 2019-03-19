@@ -29,11 +29,8 @@ final class KarmaController {
 extension KarmaController: RouteCollection {
     func boot(router: Router) throws {
         registerSlackRoutes(on: router)
-
-//        Don't need to enable these right now
-//
-//        registerStatusRoutes(on: router)
-//        registerHistoryRoutes(on: router)
+        registerStatusRoutes(on: router)
+        registerHistoryRoutes(on: router)
     }
 }
 
