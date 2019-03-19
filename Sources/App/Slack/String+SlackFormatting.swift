@@ -28,4 +28,14 @@ extension String {
     }
 
     // IM IDs start with D
+
+    func userIDMentionedBeforeAnyOtherContent() -> String? {
+        let userIdString = "^\\s*<@([\\w]{9})(?:\\|{1}[^>]+){0,1}?>"
+
+        return (try? NSRegularExpression(pattern: userIdString))?
+            .firstMatch(in: self, options: [], range: NSRange(startIndex..<endIndex, in: self))
+            .flatMap { result in
+                Range(result.range(at: 1), in: self).map { String(self[$0]) }
+        }
+    }
 }

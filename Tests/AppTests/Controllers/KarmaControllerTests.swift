@@ -17,7 +17,6 @@ final class KarmaControllerTests: XCTestCase {
 
     var testStatusRepository: TestStatusRepository!
     var testHistoryRepository: TestHistoryRepository!
-    var testKarmaParser: TestKarmaParser!
     var testSlack: TestSlack!
     var testLogger: TestLogger!
     var testSecrets: Secrets!
@@ -29,14 +28,12 @@ final class KarmaControllerTests: XCTestCase {
 
         testStatusRepository = TestStatusRepository()
         testHistoryRepository = TestHistoryRepository()
-        testKarmaParser = TestKarmaParser()
         testSlack = TestSlack()
         testLogger = TestLogger()
         testSecrets = Secrets(slackAppBotUserAPI: "slackAppBotUserAPIKey", slackRequestSigningSecret: "slackRequestSigningSecret", onTapSecret: "onTapSecret")
         
         controller = KarmaController(karmaStatusRepository: testStatusRepository,
                                      karmaHistoryRepository: testHistoryRepository,
-                                     karmaParser: testKarmaParser,
                                      slack: testSlack,
                                      log: testLogger,
                                      secrets: testSecrets)
@@ -115,47 +112,9 @@ final class KarmaControllerTests: XCTestCase {
         }
     }
 
-    // MARK: KarmaController+Slack
-    func testThatItFailsACommandRequestWhenNoResponseUrl() {
-        let command = commandWith(command: "/karma", response_url: nil)
-
-        let request = emptyRequest(using: app)
-        do {
-            let status = try controller.command(request, content: command)
-            XCTAssertEqual(status, .badRequest)
-        } catch {
-            XCTFail(error.localizedDescription)
-        }
-    }
-
-    func testThatItFailsACommandRequestItCantValidate() {
-        let command = commandWith(command: "/karma", response_url: "slackReponse")
-
-        let request = emptyRequest(using: app)
-        do {
-            let status = try controller.command(request, content: command)
-            XCTAssertEqual(status, .unauthorized)
-        } catch {
-            XCTFail(error.localizedDescription)
-        }
-    }
-
-    func testThatItReturnsOkWhenCommandRequestIsValidated() {
-        let command = commandWith(command: "/karma", response_url: "slackReponse")
-
-        let request = validatedSlackRequest(using: app)
-        do {
-            let status = try controller.command(request, content: command)
-            XCTAssertEqual(status, .ok)
-        } catch {
-            XCTFail(error.localizedDescription)
-        }
-    }
-
     // MARK: KarmaController+KarmaAdjustmentCommand Handling
     func testThatItDoesNotAllowAUserToAdjustKarmaForSelf() {
-        let expectation = XCTestExpectation(description: #function)
-        expectation.expectedFulfillmentCount = 1
+        let expectation = self.expectation(description: #function)
 
         let incomingMessage = SlackKitIncomingMessage(messageText: "text", channelId: "channelId", sender: "jacob", timestamp: "timestamp")
         let adjustments = [KarmaAdjustment(user: "jacob", count: 3)]
@@ -172,17 +131,18 @@ final class KarmaControllerTests: XCTestCase {
         }
 
         do {
-            try controller.handleKarmaAdjustmentCommand(karmaAdjustmentCommand: command, forBotUser: botUser())
+            try controller.handleKarmaAdjustmentCommand(command, forBotUser: botUser())
         } catch {
             XCTFail(error.localizedDescription)
         }
 
-        wait(for: [expectation], timeout: timeout)
+        waitForExpectations(timeout: timeout) { error in
+            XCTAssertNil(error)
+        }
     }
 
     func testThatItHandlesWhenValidAdjustmentMessageWithNoExistingStatus() {
-        let expectation = XCTestExpectation(description: #function)
-        expectation.expectedFulfillmentCount = 1
+        let expectation = self.expectation(description: #function)
 
         let incomingMessage = SlackKitIncomingMessage(messageText: "text", channelId: "channelId", sender: "jacob", timestamp: "timestamp")
         let adjustment = KarmaAdjustment(user: "allen", count: -3)
@@ -199,17 +159,18 @@ final class KarmaControllerTests: XCTestCase {
         }
 
         do {
-            try controller.handleKarmaAdjustmentCommand(karmaAdjustmentCommand: command, forBotUser: botUser())
+            try controller.handleKarmaAdjustmentCommand(command, forBotUser: botUser())
         } catch {
             XCTFail(error.localizedDescription)
         }
 
-        wait(for: [expectation], timeout: timeout)
+        waitForExpectations(timeout: timeout) { error in
+            XCTAssertNil(error)
+        }
     }
 
     func testThatItHandlesWhenValidAdjustmentMessageWithExistingStatus() {
-        let expectation = XCTestExpectation(description: #function)
-        expectation.expectedFulfillmentCount = 1
+        let expectation = self.expectation(description: #function)
 
         let incomingMessage = SlackKitIncomingMessage(messageText: "text", channelId: "channelId", sender: "jacob", timestamp: "timestamp")
         let adjustment = KarmaAdjustment(user: "allen", count: 3)
@@ -228,17 +189,22 @@ final class KarmaControllerTests: XCTestCase {
         testStatusRepository.status = originalStatus
 
         do {
-            try controller.handleKarmaAdjustmentCommand(karmaAdjustmentCommand: command, forBotUser: botUser())
+            try controller.handleKarmaAdjustmentCommand(command, forBotUser: botUser())
         } catch {
             XCTFail(error.localizedDescription)
         }
 
-        wait(for: [expectation], timeout: timeout)
+        waitForExpectations(timeout: timeout) { error in
+            XCTAssertNil(error)
+        }
     }
 
     func testThatItHandlesMultipleSlackResponsesFromMultipleAdjustmentMessages() {
-        let expectation = XCTestExpectation(description: #function)
-        expectation.expectedFulfillmentCount = 2
+        let expectation1 = self.expectation(description: #function + "1")
+        let expectation2 = self.expectation(description: #function + "2")
+
+        // TODO: Can not use this. Does not compile on Linux
+        //expectation.expectedFulfillmentCount = 2
 
         let incomingMessage = SlackKitIncomingMessage(messageText: "text", channelId: "channelId", sender: "jacob", timestamp: "timestamp")
         let allenAdjustment = KarmaAdjustment(user: "allen", count: 3)
@@ -253,24 +219,32 @@ final class KarmaControllerTests: XCTestCase {
         let expectedRyanMessage = KarmaStatusResponse(forKarmaAdjustingMessage: incomingMessage, receivedKarma: ryanAdjustment, statusAfterChange: ryanStatus)
         let expectedMessages = [expectedAllenMessage, expectedRyanMessage]
 
-        testSlack.sendMessageHandler = { message in
-            XCTAssertTrue(expectedMessages.contains(message as! KarmaStatusResponse))
 
-            expectation.fulfill()
+        var sendMessageCount = 0
+        testSlack.sendMessageHandler = { message in
+            sendMessageCount += 1
+            if sendMessageCount == 1 {
+                XCTAssertTrue(expectedMessages.contains(message as! KarmaStatusResponse))
+                expectation1.fulfill()
+            } else if sendMessageCount == 2 {
+                XCTAssertTrue(expectedMessages.contains(message as! KarmaStatusResponse))
+                expectation2.fulfill()
+            }
         }
 
         do {
-            try controller.handleKarmaAdjustmentCommand(karmaAdjustmentCommand: command, forBotUser: botUser())
+            try controller.handleKarmaAdjustmentCommand(command, forBotUser: botUser())
         } catch {
             XCTFail(error.localizedDescription)
         }
 
-        wait(for: [expectation], timeout: timeout)
+        waitForExpectations(timeout: timeout) { error in
+            XCTAssertNil(error)
+        }
     }
 
     func testThatItSendsResponseWhenErrorOccurs() {
-        let expectation = XCTestExpectation(description: #function)
-        expectation.expectedFulfillmentCount = 1
+        let expectation = self.expectation(description: #function)
 
         let incomingMessage = SlackKitIncomingMessage(messageText: "text", channelId: "channelId", sender: "jacob", timestamp: "timestamp")
         let adjustment = KarmaAdjustment(user: "allen", count: 3)
@@ -289,31 +263,236 @@ final class KarmaControllerTests: XCTestCase {
         testStatusRepository.error = .badRepo
 
         do {
-            try controller.handleKarmaAdjustmentCommand(karmaAdjustmentCommand: command, forBotUser: botUser())
+            try controller.handleKarmaAdjustmentCommand(command, forBotUser: botUser())
         } catch {
             XCTFail(error.localizedDescription)
         }
 
-        wait(for: [expectation], timeout: timeout)
+        waitForExpectations(timeout: timeout) { error in
+            XCTAssertNil(error)
+        }
+    }
+
+    // MARK: KarmaController+KarmaStatusCommand Handling
+    func testThatItSendsSlackMessageFromValidStatusCommand() {
+        let expectation = self.expectation(description: #function)
+
+        let incomingMessage = SlackKitIncomingMessage(messageText: "text", channelId: "channelId", sender: "jacob", timestamp: "timestamp")
+        let userIds = ["jacob"]
+        let command = KarmaStatusCommand(incomingMessage: incomingMessage, userIds: userIds)
+
+        let statuses = [KarmaStatus(id: "allen", count: 2, type: KarmaStatusType.user.rawValue)]
+        let expectedSlackMessage = KarmaStatusResponse(forKarmaStatusMessage: incomingMessage, statuses: statuses)
+
+        testSlack.sendMessageHandler = { message in
+            XCTAssertEqual(message as! KarmaStatusResponse, expectedSlackMessage)
+
+            expectation.fulfill()
+        }
+        testStatusRepository.statuses = statuses
+
+        do {
+            try controller.handleKarmaStatusCommand(command, forBotUser: botUser())
+        } catch {
+            XCTFail(error.localizedDescription)
+        }
+
+        waitForExpectations(timeout: timeout) { error in
+            XCTAssertNil(error)
+        }
+    }
+
+    func testThatItSendsOneSlackMessageFromValidStatusCommandWithMultipleStatus() {
+        let expectation = self.expectation(description: #function)
+
+        let incomingMessage = SlackKitIncomingMessage(messageText: "text", channelId: "channelId", sender: "jacob", timestamp: "timestamp")
+        let userIds = ["jacob"]
+        let command = KarmaStatusCommand(incomingMessage: incomingMessage, userIds: userIds)
+
+        let statuses = [KarmaStatus(id: "allen", count: 2, type: KarmaStatusType.user.rawValue),
+                        KarmaStatus(id: "jimmy", count: -3, type: KarmaStatusType.user.rawValue)]
+        let expectedSlackMessage = KarmaStatusResponse(forKarmaStatusMessage: incomingMessage, statuses: statuses)
+
+        testSlack.sendMessageHandler = { message in
+            XCTAssertEqual(message as! KarmaStatusResponse, expectedSlackMessage)
+
+            expectation.fulfill()
+        }
+        testStatusRepository.statuses = statuses
+
+        do {
+            try controller.handleKarmaStatusCommand(command, forBotUser: botUser())
+        } catch {
+            XCTFail(error.localizedDescription)
+        }
+
+        waitForExpectations(timeout: timeout) { error in
+            XCTAssertNil(error)
+        }
+    }
+
+    func testThatItSendsSlackMessageFromValidStatusCommandButEmptyStatusesReturned() {
+        let expectation = self.expectation(description: #function)
+
+        let incomingMessage = SlackKitIncomingMessage(messageText: "text", channelId: "channelId", sender: "jacob", timestamp: "timestamp")
+        let userIds = ["jacob"]
+        let command = KarmaStatusCommand(incomingMessage: incomingMessage, userIds: userIds)
+
+        let expectedSlackMessage = SlackKitResponse(to: incomingMessage, text: "Couldn't find any karma!")
+
+        testSlack.sendMessageHandler = { message in
+            XCTAssertEqual(message as! SlackKitResponse, expectedSlackMessage)
+
+            expectation.fulfill()
+        }
+        testStatusRepository.statuses = [KarmaStatus]()
+
+        do {
+            try controller.handleKarmaStatusCommand(command, forBotUser: botUser())
+        } catch {
+            XCTFail(error.localizedDescription)
+        }
+
+        waitForExpectations(timeout: timeout) { error in
+            XCTAssertNil(error)
+        }
+    }
+
+    func testThatItSendsSlackMessageFromValidStatusCommandBadFutureReturned() {
+        let expectation = self.expectation(description: #function)
+
+        let incomingMessage = SlackKitIncomingMessage(messageText: "text", channelId: "channelId", sender: "jacob", timestamp: "timestamp")
+        let userIds = ["jacob"]
+        let command = KarmaStatusCommand(incomingMessage: incomingMessage, userIds: userIds)
+
+        let expectedSlackMessage = SlackKitResponse(to: incomingMessage, text: "Something went wrong. Please try again")
+
+        testSlack.sendMessageHandler = { message in
+            XCTAssertEqual(message as! SlackKitResponse, expectedSlackMessage)
+
+            expectation.fulfill()
+        }
+
+        do {
+            try controller.handleKarmaStatusCommand(command, forBotUser: botUser())
+        } catch {
+            XCTFail(error.localizedDescription)
+        }
+
+        waitForExpectations(timeout: timeout) { error in
+            XCTAssertNil(error)
+        }
+    }
+
+    // MARK: KarmaController+KarmaLeaderboardCommand Handling
+    func testThatItSendsSlackMessageFromValidLeaderboardCommand() {
+        let expectation = self.expectation(description: #function)
+
+        let incomingMessage = SlackKitIncomingMessage(messageText: "text", channelId: "channelId", sender: "jacob", timestamp: "timestamp")
+        let command = KarmaLeaderboardCommand(incomingMessage: incomingMessage)
+
+        let statuses = [KarmaStatus(id: "allen", count: 2, type: KarmaStatusType.user.rawValue)]
+        let expectedSlackMessage = KarmaStatusResponse(forKarmaLeaderboardMessage: incomingMessage, statuses: statuses)
+
+        testSlack.sendMessageHandler = { message in
+            XCTAssertEqual(message as! KarmaStatusResponse, expectedSlackMessage)
+
+            expectation.fulfill()
+        }
+        testStatusRepository.statuses = statuses
+
+        do {
+            try controller.handleKarmaLeaderboardCommand(command, forBotUser: botUser())
+        } catch {
+            XCTFail(error.localizedDescription)
+        }
+
+        waitForExpectations(timeout: timeout) { error in
+            XCTAssertNil(error)
+        }
+    }
+
+    func testThatItSendsOneSlackMessageFromValidLeaderboardCommandWithMultipleStatus() {
+        let expectation = self.expectation(description: #function)
+
+        let incomingMessage = SlackKitIncomingMessage(messageText: "text", channelId: "channelId", sender: "jacob", timestamp: "timestamp")
+        let command = KarmaLeaderboardCommand(incomingMessage: incomingMessage)
+
+        let statuses = [KarmaStatus(id: "allen", count: 2, type: KarmaStatusType.user.rawValue),
+                        KarmaStatus(id: "jimmy", count: -3, type: KarmaStatusType.user.rawValue)]
+        let expectedSlackMessage = KarmaStatusResponse(forKarmaLeaderboardMessage: incomingMessage, statuses: statuses)
+
+        testSlack.sendMessageHandler = { message in
+            XCTAssertEqual(message as! KarmaStatusResponse, expectedSlackMessage)
+
+            expectation.fulfill()
+        }
+        testStatusRepository.statuses = statuses
+
+        do {
+            try controller.handleKarmaLeaderboardCommand(command, forBotUser: botUser())
+        } catch {
+            XCTFail(error.localizedDescription)
+        }
+
+        waitForExpectations(timeout: timeout) { error in
+            XCTAssertNil(error)
+        }
+    }
+
+    func testThatItSendsSlackMessageFromValidLeaderboardCommandButEmptyStatusesReturned() {
+        let expectation = self.expectation(description: #function)
+
+        let incomingMessage = SlackKitIncomingMessage(messageText: "text", channelId: "channelId", sender: "jacob", timestamp: "timestamp")
+        let command = KarmaLeaderboardCommand(incomingMessage: incomingMessage)
+
+        let expectedSlackMessage = SlackKitResponse(to: incomingMessage, text: "Couldn't find any karma!")
+
+        testSlack.sendMessageHandler = { message in
+            XCTAssertEqual(message as! SlackKitResponse, expectedSlackMessage)
+
+            expectation.fulfill()
+        }
+        testStatusRepository.statuses = [KarmaStatus]()
+
+        do {
+            try controller.handleKarmaLeaderboardCommand(command, forBotUser: botUser())
+        } catch {
+            XCTFail(error.localizedDescription)
+        }
+
+        waitForExpectations(timeout: timeout) { error in
+            XCTAssertNil(error)
+        }
+    }
+
+    func testThatItSendsSlackMessageFromValidLeaderboardCommandBadFutureReturned() {
+        let expectation = self.expectation(description: #function)
+
+        let incomingMessage = SlackKitIncomingMessage(messageText: "text", channelId: "channelId", sender: "jacob", timestamp: "timestamp")
+        let command = KarmaLeaderboardCommand(incomingMessage: incomingMessage)
+
+        let expectedSlackMessage = SlackKitResponse(to: incomingMessage, text: "Something went wrong. Please try again")
+
+        testSlack.sendMessageHandler = { message in
+            XCTAssertEqual(message as! SlackKitResponse, expectedSlackMessage)
+
+            expectation.fulfill()
+        }
+
+        do {
+            try controller.handleKarmaLeaderboardCommand(command, forBotUser: botUser())
+        } catch {
+            XCTFail(error.localizedDescription)
+        }
+
+        waitForExpectations(timeout: timeout) { error in
+            XCTAssertNil(error)
+        }
     }
 }
 
 extension KarmaControllerTests {
-    func commandWith(command: String?, response_url: String?) -> App.Command {
-        return Command(command: command,
-                       response_url: response_url,
-                       trigger_id: nil,
-                       text: nil,
-                       team_id: nil,
-                       team_domain: nil,
-                       enterprise_id: nil,
-                       enterprise_name: nil,
-                       channel_id: nil,
-                       channel_name: nil,
-                       user_id: nil,
-                       user_name: nil)
-    }
-
     func botUser() -> User {
         return User(id: "xBot")
     }

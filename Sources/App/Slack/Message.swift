@@ -64,6 +64,16 @@ class SlackKitIncomingMessage: SlackKitMessage {
     }
 }
 
+extension SlackKitIncomingMessage: Equatable {
+    static func == (lhs: SlackKitIncomingMessage, rhs: SlackKitIncomingMessage) -> Bool {
+        return lhs.text == rhs.text &&
+                lhs.parent == rhs.parent &&
+                lhs.channelID == rhs.channelID &&
+                lhs.sender == rhs.sender &&
+                lhs.timestamp == rhs.timestamp
+    }
+}
+
 class SlackKitResponse: SlackKitMessage {
 
     /// Constructs a new message in response to this one. If this message is in a thread,
