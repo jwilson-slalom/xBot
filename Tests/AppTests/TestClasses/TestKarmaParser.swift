@@ -9,9 +9,11 @@
 import XCTest
 
 class TestKarmaParser: KarmaParser {
+
     var karmaAdjustments = [KarmaAdjustment]()
     var userIds = [String]()
-    var mentionedUserId: String?
+    var statusMentionedUserId: String?
+    var leaderboardMentionedUserId: String?
 
     func karmaAdjustments(from message: String) -> [KarmaAdjustment] {
         return karmaAdjustments
@@ -22,6 +24,10 @@ class TestKarmaParser: KarmaParser {
     }
 
     func karmaStatusMentionedUserId(from message: String) -> String? {
-        return mentionedUserId
+        return statusMentionedUserId
+    }
+
+    func leaderboardMentionedUserId(from message: String) -> String? {
+        return leaderboardMentionedUserId
     }
 }

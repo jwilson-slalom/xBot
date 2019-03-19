@@ -17,7 +17,6 @@ final class KarmaControllerTests: XCTestCase {
 
     var testStatusRepository: TestStatusRepository!
     var testHistoryRepository: TestHistoryRepository!
-    var testKarmaParser: TestKarmaParser!
     var testSlack: TestSlack!
     var testLogger: TestLogger!
     var testSecrets: Secrets!
@@ -29,14 +28,12 @@ final class KarmaControllerTests: XCTestCase {
 
         testStatusRepository = TestStatusRepository()
         testHistoryRepository = TestHistoryRepository()
-        testKarmaParser = TestKarmaParser()
         testSlack = TestSlack()
         testLogger = TestLogger()
         testSecrets = Secrets(slackAppBotUserAPI: "slackAppBotUserAPIKey", slackRequestSigningSecret: "slackRequestSigningSecret", onTapSecret: "onTapSecret")
         
         controller = KarmaController(karmaStatusRepository: testStatusRepository,
                                      karmaHistoryRepository: testHistoryRepository,
-                                     karmaParser: testKarmaParser,
                                      slack: testSlack,
                                      log: testLogger,
                                      secrets: testSecrets)
@@ -116,41 +113,41 @@ final class KarmaControllerTests: XCTestCase {
     }
 
     // MARK: KarmaController+Slack
-    func testThatItFailsACommandRequestWhenNoResponseUrl() {
-        let command = commandWith(command: "/karma", response_url: nil)
-
-        let request = emptyRequest(using: app)
-        do {
-            let status = try controller.command(request, content: command)
-            XCTAssertEqual(status, .badRequest)
-        } catch {
-            XCTFail(error.localizedDescription)
-        }
-    }
-
-    func testThatItFailsACommandRequestItCantValidate() {
-        let command = commandWith(command: "/karma", response_url: "slackReponse")
-
-        let request = emptyRequest(using: app)
-        do {
-            let status = try controller.command(request, content: command)
-            XCTAssertEqual(status, .unauthorized)
-        } catch {
-            XCTFail(error.localizedDescription)
-        }
-    }
-
-    func testThatItReturnsOkWhenCommandRequestIsValidated() {
-        let command = commandWith(command: "/karma", response_url: "slackReponse")
-
-        let request = validatedSlackRequest(using: app)
-        do {
-            let status = try controller.command(request, content: command)
-            XCTAssertEqual(status, .ok)
-        } catch {
-            XCTFail(error.localizedDescription)
-        }
-    }
+//    func testThatItFailsACommandRequestWhenNoResponseUrl() {
+//        let command = commandWith(command: "/karma", response_url: nil)
+//
+//        let request = emptyRequest(using: app)
+//        do {
+//            let status = try controller.command(request, content: command)
+//            XCTAssertEqual(status, .badRequest)
+//        } catch {
+//            XCTFail(error.localizedDescription)
+//        }
+//    }
+//
+//    func testThatItFailsACommandRequestItCantValidate() {
+//        let command = commandWith(command: "/karma", response_url: "slackReponse")
+//
+//        let request = emptyRequest(using: app)
+//        do {
+//            let status = try controller.command(request, content: command)
+//            XCTAssertEqual(status, .unauthorized)
+//        } catch {
+//            XCTFail(error.localizedDescription)
+//        }
+//    }
+//
+//    func testThatItReturnsOkWhenCommandRequestIsValidated() {
+//        let command = commandWith(command: "/karma", response_url: "slackReponse")
+//
+//        let request = validatedSlackRequest(using: app)
+//        do {
+//            let status = try controller.command(request, content: command)
+//            XCTAssertEqual(status, .ok)
+//        } catch {
+//            XCTFail(error.localizedDescription)
+//        }
+//    }
 
     // MARK: KarmaController+KarmaAdjustmentCommand Handling
     func testThatItDoesNotAllowAUserToAdjustKarmaForSelf() {
@@ -299,21 +296,6 @@ final class KarmaControllerTests: XCTestCase {
 }
 
 extension KarmaControllerTests {
-    func commandWith(command: String?, response_url: String?) -> App.Command {
-        return Command(command: command,
-                       response_url: response_url,
-                       trigger_id: nil,
-                       text: nil,
-                       team_id: nil,
-                       team_domain: nil,
-                       enterprise_id: nil,
-                       enterprise_name: nil,
-                       channel_id: nil,
-                       channel_name: nil,
-                       user_id: nil,
-                       user_name: nil)
-    }
-
     func botUser() -> User {
         return User(id: "xBot")
     }

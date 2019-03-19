@@ -29,7 +29,7 @@ final class KarmaStatusCommandTests: XCTestCase {
         let expectedUserIds = ["jacob"]
         let expectedCommand = KarmaStatusCommand(incomingMessage: incomingMessage, userIds: expectedUserIds)
 
-        testKarmaParser.mentionedUserId = "xBot"
+        testKarmaParser.statusMentionedUserId = "xBot"
         testKarmaParser.userIds = expectedUserIds
 
         let testCompletion: (KarmaStatusCommand, User) throws -> Void = { command, _ in
@@ -56,7 +56,7 @@ final class KarmaStatusCommandTests: XCTestCase {
         let parsedUserIds = ["jacob", "xBot", "allen"]
         let expectedCommand = KarmaStatusCommand(incomingMessage: incomingMessage, userIds: expectedUserIds)
 
-        testKarmaParser.mentionedUserId = "xBot"
+        testKarmaParser.statusMentionedUserId = "xBot"
         testKarmaParser.userIds = parsedUserIds
 
         let testCompletion: (KarmaStatusCommand, User) throws -> Void = { command, _ in
@@ -97,7 +97,7 @@ final class KarmaStatusCommandTests: XCTestCase {
             XCTFail("Should not be getting called")
         }
 
-        testKarmaParser.mentionedUserId = "xBot_not"
+        testKarmaParser.statusMentionedUserId = "xBot_not"
 
         XCTAssertTrue(responder.register(completion: testCompletion))
         do {
@@ -114,7 +114,7 @@ final class KarmaStatusCommandTests: XCTestCase {
             XCTFail("Should not be getting called")
         }
 
-        testKarmaParser.mentionedUserId = "xBot"
+        testKarmaParser.statusMentionedUserId = "xBot"
 
         XCTAssertTrue(responder.register(completion: testCompletion))
         do {
@@ -133,7 +133,7 @@ final class KarmaStatusCommandTests: XCTestCase {
             XCTFail("Should not be getting called")
         }
 
-        testKarmaParser.mentionedUserId = "xBot"
+        testKarmaParser.statusMentionedUserId = "xBot"
         testKarmaParser.userIds = parsedUserIds
 
         XCTAssertTrue(responder.register(completion: testCompletion))
