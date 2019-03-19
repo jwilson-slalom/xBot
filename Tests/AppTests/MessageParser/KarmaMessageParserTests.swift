@@ -223,7 +223,7 @@ final class KarmaMessageParserTests: XCTestCase {
         }
         XCTAssertEqual(mentionedUserId, expectedMentionedId)
 
-        testMessage = "     <@U12345678|jacob>    status      <U98765432>"
+        testMessage = "     <@U12345678|jacob>    stATuS      <U98765432>"
         guard let mentionedUserId2 = parser.karmaStatusMentionedUserId(from: testMessage) else {
             return XCTFail("mentionedUserId2 should not be nil")
         }
@@ -243,5 +243,39 @@ final class KarmaMessageParserTests: XCTestCase {
 
         testMessage = "<@U12345678|jacob> something status <U98765432>"
         XCTAssertNil(parser.karmaStatusMentionedUserId(from: testMessage))
+    }
+
+    func testThatItParsesMentionedUserIdFromKarmaLeaderboardMessage() {
+        let expectedMentionedId = "U12345678"
+
+        testMessage = "<@U12345678> leaderboard dasfsdfas asdfsdff"
+        guard let mentionedUserId = parser.leaderboardMentionedUserId(from: testMessage) else {
+            return XCTFail("mentionedUserId should not be nil")
+        }
+        XCTAssertEqual(mentionedUserId, expectedMentionedId)
+
+        testMessage = "     <@U12345678|jacob>    lEADerBoard      <U98765432>"
+        guard let mentionedUserId2 = parser.leaderboardMentionedUserId(from: testMessage) else {
+            return XCTFail("mentionedUserId2 should not be nil")
+        }
+        XCTAssertEqual(mentionedUserId2, expectedMentionedId)
+
+        testMessage = " <@U12345678|jacob>  leaderboard<U98765432>"
+        guard let mentionedUserId3 = parser.leaderboardMentionedUserId(from: testMessage) else {
+            return XCTFail("mentionedUserId3 should not be nil")
+        }
+        XCTAssertEqual(mentionedUserId3, expectedMentionedId)
+    }
+
+    func testThatItFailsToParseMentionedUserIdFromKarmaLeaderboardMessage() {
+
+        testMessage = "something <@U12345678> leaderboard dasfsdfas asdfsdff"
+        XCTAssertNil(parser.leaderboardMentionedUserId(from: testMessage))
+
+        testMessage = " <@U12345678|jacob>leaderboard      <U98765432>"
+        XCTAssertNil(parser.leaderboardMentionedUserId(from: testMessage))
+
+        testMessage = "<@U12345678|jacob> something leaderboard <U98765432>"
+        XCTAssertNil(parser.leaderboardMentionedUserId(from: testMessage))
     }
 }
