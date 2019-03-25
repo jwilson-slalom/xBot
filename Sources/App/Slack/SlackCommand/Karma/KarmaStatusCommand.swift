@@ -15,6 +15,9 @@ struct KarmaStatusCommand: SlackCommand {
 extension KarmaStatusCommand: Equatable { }
 
 class KarmaStatusResponder: SlackCommandResponder {
+    let commandInfo: CommandInfo = CommandInfo(usage: "@xbot status [@User @User ...]",
+                                               description: "Displays current karma counts for a list of User's")
+
     private var completion: ((KarmaStatusCommand, User) throws -> Void)?
     private let karmaParser: KarmaParser
 

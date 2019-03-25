@@ -9,17 +9,19 @@ import SlackKit
 import Vapor
 
 protocol CommandCollection {
-    func boot(router: SlackRouter) throws
+    func boot(router: SlackRouter, env: Environment) throws
 }
 
 protocol SlackRouter: SlackResponder {
+    var registeredCommands: [CommandInfo] { get }
+
     func register(responder: SlackResponder, for eventTypes: [EventType])
     func registerCommandResponder<C>(for eventTypes: [EventType], responder: SlackCommandResponder, use completion: @escaping (C, User) throws -> Void)
 }
 
 extension SlackRouter {
-    public func register(collection: CommandCollection) throws {
-        try collection.boot(router: self)
+    public func register(collection: CommandCollection, env: Environment) throws {
+        try collection.boot(router: self, env: env)
     }
 }
 
@@ -30,6 +32,8 @@ public final class StandardSlackRouter: Service, SlackRouter {
 
     private var responders = [EventType: [SlackResponder]]()
     private var commandResponders = [EventType: [SlackCommandResponder]]()
+
+    var registeredCommands = [CommandInfo]()
 
     func register(responder: SlackResponder, for eventTypes: [EventType]) {
         eventTypes.forEach {
@@ -50,6 +54,7 @@ public final class StandardSlackRouter: Service, SlackRouter {
             respondersForType.append(responder)
             commandResponders[$0] = respondersForType
         }
+        registeredCommands.append(responder.commandInfo)
     }
 
     func handle(event: Event, ofType type: EventType, forBotUser botUser: User) throws {

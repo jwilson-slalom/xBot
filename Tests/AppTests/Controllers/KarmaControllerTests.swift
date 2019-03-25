@@ -490,6 +490,33 @@ final class KarmaControllerTests: XCTestCase {
             XCTAssertNil(error)
         }
     }
+
+    // MARK: KarmaController+KarmaHelpCommand Handling
+    func testThatItSendsSlackMessageFromValidHelpCommand() {
+        let expectation = self.expectation(description: #function)
+
+        let incomingMessage = SlackKitIncomingMessage(messageText: "text", channelId: "channelId", sender: "jacob", timestamp: "timestamp")
+        let helpMessage = "Help Message"
+        let command = KarmaHelpCommand(incomingMessage: incomingMessage, helpMessage: helpMessage)
+
+        let expectedSlackMessage = SlackHelpResponse(from: command)
+
+        testSlack.sendMessageHandler = { message in
+            XCTAssertEqual(message as! SlackHelpResponse, expectedSlackMessage)
+
+            expectation.fulfill()
+        }
+
+        do {
+            try controller.handleKarmaHelpCommand(command, forBotUser: botUser())
+        } catch {
+            XCTFail(error.localizedDescription)
+        }
+
+        waitForExpectations(timeout: timeout) { error in
+            XCTAssertNil(error)
+        }
+    }
 }
 
 extension KarmaControllerTests {

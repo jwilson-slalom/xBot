@@ -104,3 +104,19 @@ extension SlackKitResponse: Equatable {
                 //lhs.attachments == rhs.attachments
     }
 }
+
+class SlackHelpResponse: SlackKitResponse {
+    init(from helpCommand: KarmaHelpCommand) {
+        let attachment = SlackHelpResponse.helpAttachment(from: helpCommand)
+        super.init(to: helpCommand.incomingMessage, text: "", attachments: [attachment])
+    }
+
+    static func helpAttachment(from helpCommand: KarmaHelpCommand) -> Attachment {
+        return Attachment(attachment: [
+            "fallback": "xBot Help",
+            "title": "xBot Help",
+            "mrkdwn_in": ["text"],
+            "text": helpCommand.helpMessage
+            ])
+    }
+}

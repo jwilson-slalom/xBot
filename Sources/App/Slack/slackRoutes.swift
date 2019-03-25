@@ -10,7 +10,7 @@ import enum SlackKit.EventType
 
 /// Register your application's slack routes here.
 func slackRoutes(_ router: SlackRouter, _ container: Container) throws {
-    try router.register(collection: try container.make(KarmaController.self))
+    try router.register(collection: try container.make(KarmaController.self), env: container.environment)
 
     router.register(responder: try container.make(OnTapController.self), for: [.message])
 }

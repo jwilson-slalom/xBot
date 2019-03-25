@@ -1,0 +1,28 @@
+#set("content") {
+    <h1 class="text-light bg-dark">xBot Help</h1>
+
+    <table class="table table-hover table-dark">
+    <thead class="thead-dark">
+        <tr>
+            <th>
+                Usage
+            </th>
+            <th>
+                Description
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        #for(commandInfo in commands) {
+            <tr>
+                <td>
+                    #(commandInfo.usage)
+                </td>
+                <td>#(commandInfo.description)</td>
+            </tr>
+        }
+    </tbody>
+    </table>
+}
+
+#embed("base")

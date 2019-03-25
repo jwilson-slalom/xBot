@@ -12,6 +12,16 @@ protocol SlackCommand {
 }
 
 protocol SlackCommandResponder {
+    var commandInfo: CommandInfo { get }
+
     func handle(incomingMessage: SlackKitIncomingMessage, botUser: User) throws
     func register<C>(completion: @escaping (C, User) throws -> Void) -> Bool
 }
+
+struct CommandInfo {
+    let usage: String
+    let description: String
+}
+
+extension CommandInfo: Equatable { }
+extension CommandInfo: Encodable { }

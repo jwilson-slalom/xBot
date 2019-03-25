@@ -9,10 +9,13 @@ import Vapor
 import struct SlackKit.User
 
 extension KarmaController: CommandCollection {
-    func boot(router: SlackRouter) throws {
+    func boot(router: SlackRouter, env: Environment) throws {
         router.registerCommandResponder(for: [.message], responder: KarmaAdjustmentResponder(), use: handleKarmaAdjustmentCommand)
         router.registerCommandResponder(for: [.message], responder: KarmaStatusResponder(), use: handleKarmaStatusCommand)
         router.registerCommandResponder(for: [.message], responder: KarmaLeaderboardResponder(), use: handleKarmaLeaderboardCommand)
+
+        // TODO: Move this out of KarmaController as it won't always be constrained to Karma help commands
+        router.registerCommandResponder(for: [.message], responder: KarmaHelpResponder(isRelease: env.isRelease), use: handleKarmaHelpCommand)
     }
 }
 
@@ -65,6 +68,10 @@ extension KarmaController {
     func handleKarmaLeaderboardCommand(_ karmaLeaderboardCommand: KarmaLeaderboardCommand, forBotUser: User) throws {
         let statuses = karmaStatusRepository.top(count: karmaLeaderboardCommand.leaderboardCount)
         try handle(statuses: statuses, on: karmaLeaderboardCommand.incomingMessage, forType: .leaderboard)
+    }
+
+    func handleKarmaHelpCommand(_ karmaHelpCommand: KarmaHelpCommand, forBotUser: User) throws {
+        try slack.send(message: SlackHelpResponse(from: karmaHelpCommand))
     }
 
     private func handle(statuses: Future<[KarmaStatus]>, on incomingMessage: SlackKitIncomingMessage, forType type: KarmaCommandType) throws {

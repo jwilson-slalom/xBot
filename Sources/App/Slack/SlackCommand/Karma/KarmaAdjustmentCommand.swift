@@ -15,6 +15,9 @@ struct KarmaAdjustmentCommand: SlackCommand {
 extension KarmaAdjustmentCommand: Equatable { }
 
 class KarmaAdjustmentResponder: SlackCommandResponder {
+    let commandInfo: CommandInfo = CommandInfo(usage: "[@User ++/-- @User ++/-- ...]",
+                                               description: "Allows you to upvote or downvote a user. Can be used multiple times in one message")
+
     private var completion: ((KarmaAdjustmentCommand, User) throws -> Void)?
     private let karmaParser: KarmaParser
 

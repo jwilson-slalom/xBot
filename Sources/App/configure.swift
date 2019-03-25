@@ -1,9 +1,12 @@
 import FluentPostgreSQL
+import Leaf
 import Vapor
 
 /// Called before your application initializes.
 public func configure(_ config: inout Config, _ env: inout Environment, _ services: inout Services) throws {
 	try services.register(FluentPostgreSQLProvider())
+    try services.register(LeafProvider())
+    config.prefer(LeafRenderer.self, for: ViewRenderer.self)
 
     services.register(Router.self) { container -> EngineRouter in
         let router = EngineRouter.default()
@@ -13,6 +16,7 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
 
     // Register middleware
     var middlewares = MiddlewareConfig() // Create _empty_ middleware config
+    middlewares.use(FileMiddleware.self)
     middlewares.use(ErrorMiddleware.self) // Catches errors and converts to HTTP response
     services.register(middlewares)
 

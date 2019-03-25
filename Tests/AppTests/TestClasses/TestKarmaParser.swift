@@ -14,6 +14,7 @@ class TestKarmaParser: KarmaParser {
     var userIds = [String]()
     var statusMentionedUserId: String?
     var leaderboardMentionedUserId: String?
+    var helpMentionedUserId: String?
 
     func karmaAdjustments(from message: String) -> [KarmaAdjustment] {
         return karmaAdjustments
@@ -29,5 +30,9 @@ class TestKarmaParser: KarmaParser {
 
     func leaderboardMentionedUserId(from message: String) -> String? {
         return leaderboardMentionedUserId
+    }
+
+    func helpMentionedUserId(from message: String) -> String? {
+        return helpMentionedUserId
     }
 }

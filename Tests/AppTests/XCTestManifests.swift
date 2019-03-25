@@ -21,6 +21,7 @@ extension KarmaControllerTests {
         ("testThatItSendsOneSlackMessageFromValidLeaderboardCommandWithMultipleStatus", testThatItSendsOneSlackMessageFromValidLeaderboardCommandWithMultipleStatus),
         ("testThatItSendsOneSlackMessageFromValidStatusCommandWithMultipleStatus", testThatItSendsOneSlackMessageFromValidStatusCommandWithMultipleStatus),
         ("testThatItSendsResponseWhenErrorOccurs", testThatItSendsResponseWhenErrorOccurs),
+        ("testThatItSendsSlackMessageFromValidHelpCommand", testThatItSendsSlackMessageFromValidHelpCommand),
         ("testThatItSendsSlackMessageFromValidLeaderboardCommand", testThatItSendsSlackMessageFromValidLeaderboardCommand),
         ("testThatItSendsSlackMessageFromValidLeaderboardCommandBadFutureReturned", testThatItSendsSlackMessageFromValidLeaderboardCommandBadFutureReturned),
         ("testThatItSendsSlackMessageFromValidLeaderboardCommandButEmptyStatusesReturned", testThatItSendsSlackMessageFromValidLeaderboardCommandButEmptyStatusesReturned),
@@ -28,6 +29,15 @@ extension KarmaControllerTests {
         ("testThatItSendsSlackMessageFromValidStatusCommandBadFutureReturned", testThatItSendsSlackMessageFromValidStatusCommandBadFutureReturned),
         ("testThatItSendsSlackMessageFromValidStatusCommandButEmptyStatusesReturned", testThatItSendsSlackMessageFromValidStatusCommandButEmptyStatusesReturned),
         ("testThatItUpdatesAStatus", testThatItUpdatesAStatus),
+    ]
+}
+
+extension KarmaHelpCommandTests {
+    static let __allTests = [
+        ("testThatItCallsCompletionOnResponder", testThatItCallsCompletionOnResponder),
+        ("testThatItCallsCompletionOnResponderAndLinkIsCorrectForProduction", testThatItCallsCompletionOnResponderAndLinkIsCorrectForProduction),
+        ("testThatItDoesNotCallCompletionBecauseMentionedIdDoesNotEqualBotUser", testThatItDoesNotCallCompletionBecauseMentionedIdDoesNotEqualBotUser),
+        ("testThatItDoesNotCallCompletionOnResponderWhenBadCompletionIsSentIn", testThatItDoesNotCallCompletionOnResponderWhenBadCompletionIsSentIn),
     ]
 }
 
@@ -46,8 +56,10 @@ extension KarmaMessageParserTests {
         ("testThatItDoesNotParseUserIds", testThatItDoesNotParseUserIds),
         ("testThatItDoesParsesUsersAndHitsMaximum_Negative", testThatItDoesParsesUsersAndHitsMaximum_Negative),
         ("testThatItDoesParsesUsersAndHitsMaximum_Positive", testThatItDoesParsesUsersAndHitsMaximum_Positive),
+        ("testThatItFailsToParseMentionedUserIdFromKarmaHelpMessage", testThatItFailsToParseMentionedUserIdFromKarmaHelpMessage),
         ("testThatItFailsToParseMentionedUserIdFromKarmaLeaderboardMessage", testThatItFailsToParseMentionedUserIdFromKarmaLeaderboardMessage),
         ("testThatItFailsToParseMentionedUserIdFromKarmaStatusMessage", testThatItFailsToParseMentionedUserIdFromKarmaStatusMessage),
+        ("testThatItParsesMentionedUserIdFromKarmaHelpMessage", testThatItParsesMentionedUserIdFromKarmaHelpMessage),
         ("testThatItParsesMentionedUserIdFromKarmaLeaderboardMessage", testThatItParsesMentionedUserIdFromKarmaLeaderboardMessage),
         ("testThatItParsesMentionedUserIdFromKarmaStatusMessage", testThatItParsesMentionedUserIdFromKarmaStatusMessage),
         ("testThatItParsesMultipleUser_Negative", testThatItParsesMultipleUser_Negative),
@@ -76,6 +88,7 @@ public func __allTests() -> [XCTestCaseEntry] {
     return [
         testCase(KarmaAdjustmentCommandTests.__allTests),
         testCase(KarmaControllerTests.__allTests),
+        testCase(KarmaHelpCommandTests.__allTests),
         testCase(KarmaLeaderboardCommandTests.__allTests),
         testCase(KarmaMessageParserTests.__allTests),
         testCase(KarmaStatusCommandTests.__allTests),

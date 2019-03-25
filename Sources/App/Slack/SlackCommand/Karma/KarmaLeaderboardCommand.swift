@@ -20,6 +20,9 @@ struct KarmaLeaderboardCommand: SlackCommand {
 extension KarmaLeaderboardCommand: Equatable { }
 
 class KarmaLeaderboardResponder: SlackCommandResponder {
+    let commandInfo: CommandInfo = CommandInfo(usage: "@xbot leaderboard",
+                                               description: "Displays the top 10 users and their karma values")
+
     private var completion: ((KarmaLeaderboardCommand, User) throws -> Void)?
     private let karmaParser: KarmaParser
 
