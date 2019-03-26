@@ -50,6 +50,28 @@ class SlackKitIncomingMessage: SlackKitMessage {
 
         super.init(text: messageText, channelID: .init(id: channelID), parent: event.message?.threadTs)
     }
+
+    public init(messageText: String,
+                channelId: String,
+                sender: String,
+                timestamp: String) {
+
+
+        self.sender = sender
+        self.timestamp = timestamp
+
+        super.init(text: messageText, channelID: .init(id: channelId))
+    }
+}
+
+extension SlackKitIncomingMessage: Equatable {
+    static func == (lhs: SlackKitIncomingMessage, rhs: SlackKitIncomingMessage) -> Bool {
+        return lhs.text == rhs.text &&
+                lhs.parent == rhs.parent &&
+                lhs.channelID == rhs.channelID &&
+                lhs.sender == rhs.sender &&
+                lhs.timestamp == rhs.timestamp
+    }
 }
 
 class SlackKitResponse: SlackKitMessage {
@@ -71,5 +93,30 @@ class SlackKitResponse: SlackKitMessage {
         } else {
             super.init(text: text, channelID: incomingMessage.channelID, parent: incomingMessage.timestamp)
         }
+    }
+}
+
+extension SlackKitResponse: Equatable {
+    static func == (lhs: SlackKitResponse, rhs: SlackKitResponse) -> Bool {
+        return lhs.text == rhs.text &&
+                lhs.parent == rhs.parent &&
+                lhs.channelID == rhs.channelID// &&
+                //lhs.attachments == rhs.attachments
+    }
+}
+
+class SlackHelpResponse: SlackKitResponse {
+    init(from helpCommand: KarmaHelpCommand) {
+        let attachment = SlackHelpResponse.helpAttachment(from: helpCommand)
+        super.init(to: helpCommand.incomingMessage, text: "", attachments: [attachment])
+    }
+
+    static func helpAttachment(from helpCommand: KarmaHelpCommand) -> Attachment {
+        return Attachment(attachment: [
+            "fallback": "xBot Help",
+            "title": "xBot Help",
+            "mrkdwn_in": ["text"],
+            "text": helpCommand.helpMessage
+            ])
     }
 }

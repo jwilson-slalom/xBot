@@ -8,39 +8,46 @@
 import SlackKit
 import Vapor
 
-// Traditional singleton. Only a single listener is needed in the app
-// because the websocket client is single threaded
-final class SlackListener: ServiceType {
+class SlackListenerProvider: Provider {
 
-    private static var shared = SlackListener()
-    static func makeService(for container: Container) throws -> SlackListener {
-        shared.secrets = try container.make(Secrets.self)
-        return shared
-    }
+    func register(_ services: inout Services) throws {
 
-    private let respondersLock = DispatchQueue(label: "responders.lock", qos: .default)
-    private var responders = [String: [(SlackResponder, Worker)]]()
+        services.register(SlackListener.self)
 
-    private let slackKit = SlackKit()
-    private let log = ConsoleLogger(console: Terminal())
-
-    public var botUser: User? {
-        return secrets.flatMap { slackKit.clients[$0.slackAppBotUserAPI] }?.client?.authenticatedUser
-    }
-
-    public var secrets: Secrets? {
-        didSet {
-            guard secrets != oldValue else { return }
-
-            if let secrets = secrets {
-                slackKit.addRTMBotWithAPIToken(secrets.slackAppBotUserAPI, client: SimpleClient(), rtm: VaporEngineRTM())
-            } else if let oldKey = oldValue {
-                slackKit.clients[oldKey.slackAppBotUserAPI]?.rtm?.disconnect()
-            }
+        services.register(SlackRouter.self) { container -> StandardSlackRouter in
+            let router = StandardSlackRouter()
+            try slackRoutes(router, container)
+            return router
         }
     }
 
-    private init() {
+    func didBoot(_ container: Container) throws -> EventLoopFuture<Void> {
+        _ = try container.make(SlackListener.self)
+        return container.future()
+    }
+}
+
+final class SlackListener {
+
+    private let slackKit = SlackKit()
+
+    public let secrets: Secrets
+    private let router: SlackRouter
+    private let log: Logger
+    private let worker: Worker
+
+    private var botUser: User? {
+        return slackKit.clients[secrets.slackAppBotUserAPI]?.client?.authenticatedUser
+    }
+
+    private init(secrets: Secrets, router: SlackRouter, logger: Logger, on worker: Worker) {
+        self.secrets = secrets
+        self.router = router
+        self.log = logger
+        self.worker = worker
+
+        slackKit.addRTMBotWithAPIToken(secrets.slackAppBotUserAPI, client: SimpleClient(), rtm: VaporEngineRTM())
+
         // Types not in this list are ignored entirely
         let eventTypes: [EventType] = [.message,
                                        .memberJoinedChannel,
@@ -56,47 +63,38 @@ final class SlackListener: ServiceType {
         }
     }
 
-    func register(responder: SlackResponder, on eventLoop: Worker) {
-        let serviceName = type(of: responder).serviceName
-
-        respondersLock.sync {
-            var responders = self.responders[serviceName] ?? []
-            responders.append((responder, eventLoop))
-
-            self.responders[serviceName] = responders
-        }
-    }
-
     private func handleEvent(_ event: Event, onConnection connection: ClientConnection) {
         guard let type = event.type else {
             self.log.error("Event without a type came in")
             return
         }
 
-        // TODO: Rotate which ones are chosen, will probably need a more formal type
-
-        let targets = responders.values.compactMap { $0.first }.filter { $0.0.eventTypes.contains(type) }
-
-        if type == .message, let message = SlackKitIncomingMessage(event: event) {
-
-            targets.forEach { responder, worker in
-                worker.eventLoop.submit {
-                    try responder.handle(incomingMessage: message)
-                }.catch { error in
-                    self.log.error("Slack responder threw an error: \(error)")
-                }
-            }
+        guard let botUser = botUser else {
+            self.log.error("No bot user, can't be connected/listening, this is weird")
             return
         }
 
-        // Fallback to the generic event handler
-        targets.forEach { responder, worker in
-            worker.eventLoop.submit {
-                try responder.handle(event: event)
+        let router = self.router
+
+        // Jump to our event loop, this ensures synchronization on the responders for
+        // this container
+        worker
+            .eventLoop
+            .submit {
+                try router.handle(event: event, ofType: type, forBotUser: botUser)
             }.catch { error in
                 self.log.error("Slack responder threw an error: \(error)")
             }
-        }
+    }
+}
+
+extension SlackListener: ServiceType {
+
+    static func makeService(for container: Container) throws -> SlackListener {
+        return SlackListener(secrets: try container.make(),
+                             router: try container.make(),
+                             logger: try container.make(),
+                             on: container)
     }
 }
 

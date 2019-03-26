@@ -6,78 +6,38 @@
 //
 
 import Vapor
+import struct SlackKit.User
 
-extension KarmaController {
-    func registerSlackRoutes(on router: Router) {
-        router.post("command", use: command)
-        router.post(Command.self, at: "command/karma", use: karmaCommand)
-    }
+extension KarmaController: CommandCollection {
+    func boot(router: SlackRouter, env: Environment) throws {
+        router.registerCommandResponder(for: [.message], responder: KarmaAdjustmentResponder(), use: handleKarmaAdjustmentCommand)
+        router.registerCommandResponder(for: [.message], responder: KarmaStatusResponder(), use: handleKarmaStatusCommand)
+        router.registerCommandResponder(for: [.message], responder: KarmaLeaderboardResponder(), use: handleKarmaLeaderboardCommand)
 
-    func command(_ req: Request) throws -> Future<Response> {
-        return try req.content.decode(Command.self).flatMap { _ in
-            try Leaderboard(text: "leaderboard").encode(for: req)
-        }
-    }
-
-    func karmaCommand(_ req: Request, content: Command) throws -> HTTPStatus {
-        guard let responseUrl = content.response_url else {
-            return .badRequest
-        }
-        guard try req.validateSlackRequest(signingSecret: secrets.slackRequestSigningSecret) else {
-            return .unauthorized
-        }
-
-        // Do this in the background
-        processKarmaCommand(req, content: content, responseUrl: responseUrl)
-
-        // Respond immediately
-        return .ok
-    }
-
-    private func processKarmaCommand(_ req: Request, content: Command, responseUrl: String) {
-        let userIds = karmaParser.userIds(from: content.text ?? "")
-
-        karmaStatusRepository
-            .find(ids: userIds)
-            .flatMap { karma -> Future<Response> in
-                guard !karma.isEmpty else {
-                    return try req.client().post(responseUrl) { beforePost in
-                        let message = SimpleMessage(text: "Couldn't find any karma!")
-                        try beforePost.content.encode(json: message)
-                    }
-                }
-
-                return try req.client().post(responseUrl) { beforePost in
-                    let karmaResponse = KarmaStatusResponse(forSlashCommandWithKarmaStatuses: karma)
-                    try beforePost.content.encode(json: karmaResponse)
-                }
-            }.catch {
-                self.log.error("Failed to respond to Slack slash command \($0)")
-            }
+        // TODO: Move this out of KarmaController as it won't always be constrained to Karma help commands
+        router.registerCommandResponder(for: [.message], responder: KarmaHelpResponder(isRelease: env.isRelease), use: handleKarmaHelpCommand)
     }
 }
 
-extension KarmaController: SlackResponder {
-
-    func handle(incomingMessage: SlackKitIncomingMessage) throws {
-
-        let karmaChanges = karmaParser.karmaAdjustments(from: incomingMessage.text)
-
+// MARK: Command Handling
+extension KarmaController {
+    func handleKarmaAdjustmentCommand(_ karmaAdjustmentCommand: KarmaAdjustmentCommand, forBotUser: User) throws {
+        let incomingMessage = karmaAdjustmentCommand.incomingMessage
         let slack = self.slack
         let statusRepository = self.karmaStatusRepository
         let historyRepository = self.karmaHistoryRepository
         let log = self.log
 
-        try karmaChanges.forEach { change in
+        try karmaAdjustmentCommand.adjustments.forEach { adjustment in
 
-            guard change.user != incomingMessage.sender else {
-                let errorMessage = "You can't adjust karma for yourself! "
+            guard adjustment.user != incomingMessage.sender else {
+                let errorMessage = "You can't adjust karma for yourself!"
                 try slack.send(message: SlackKitResponse(to: incomingMessage, text: errorMessage), onlyVisibleTo: incomingMessage.sender)
                 return
             }
 
             // Save history record
-            let karmaHistory = KarmaSlackHistory(karmaCount: change.count, fromUser: incomingMessage.sender, karmaReceiver: change.user, channel: incomingMessage.channelID.id)
+            let karmaHistory = KarmaSlackHistory(karmaCount: adjustment.count, karmaReceiver: adjustment.user, karmaSender: incomingMessage.sender, inChannel: incomingMessage.channelID.id)
             historyRepository
                 .save(history: karmaHistory)
                 .catch {
@@ -86,11 +46,11 @@ extension KarmaController: SlackResponder {
 
             // Update karma
             statusRepository
-                .find(id: change.user)
+                .find(id: adjustment.user)
                 .flatMap {
-                    statusRepository.save(karma: KarmaStatus(id: change.user, count: ($0?.count ?? 0) + change.count))
+                    statusRepository.save(karma: KarmaStatus(id: adjustment.user, count: ($0?.count ?? 0) + adjustment.count))
                 }.thenThrowing { updatedStatus -> Void in
-                    try slack.send(message: KarmaStatusResponse(forKarmaAdjustingMessage: incomingMessage, receivedKarma: change, statusAfterChange: updatedStatus))
+                    try slack.send(message: KarmaStatusResponse(forKarmaAdjustingMessage: incomingMessage, receivedKarma: adjustment, statusAfterChange: updatedStatus))
                 }.catchMap { error in
                     let errorMessage = "Something went wrong. Please try again"
                     try slack.send(message: SlackKitResponse(to: incomingMessage, text: errorMessage), onlyVisibleTo: incomingMessage.sender)
@@ -98,5 +58,56 @@ extension KarmaController: SlackResponder {
                     log.error("Completely unhandled Karma error occurred. This is bad, so bad: \($0)")
                 }
         }
+    }
+
+    func handleKarmaStatusCommand(_ karmaStatusCommand: KarmaStatusCommand, forBotUser: User) throws {
+        let statuses = karmaStatusRepository.find(ids: karmaStatusCommand.userIds)
+        try handle(statuses: statuses, on: karmaStatusCommand.incomingMessage, forType: .status)
+    }
+
+    func handleKarmaLeaderboardCommand(_ karmaLeaderboardCommand: KarmaLeaderboardCommand, forBotUser: User) throws {
+        let statuses = karmaStatusRepository.top(count: karmaLeaderboardCommand.leaderboardCount)
+        try handle(statuses: statuses, on: karmaLeaderboardCommand.incomingMessage, forType: .leaderboard)
+    }
+
+    func handleKarmaHelpCommand(_ karmaHelpCommand: KarmaHelpCommand, forBotUser: User) throws {
+        try slack.send(message: SlackHelpResponse(from: karmaHelpCommand))
+    }
+
+    private func handle(statuses: Future<[KarmaStatus]>, on incomingMessage: SlackKitIncomingMessage, forType type: KarmaCommandType) throws {
+        let slack = self.slack
+
+        statuses
+            .thenThrowing {
+                guard !$0.isEmpty else {
+                    let message = "Couldn't find any karma!"
+                    try slack.send(message: SlackKitResponse(to: incomingMessage, text: message))
+                    return
+                }
+
+                let response = self.response(forType: type, on: incomingMessage, statuses: $0)
+                try slack.send(message: response)
+            }
+            .catchMap { error in
+                let errorMessage = "Something went wrong. Please try again"
+                try slack.send(message: SlackKitResponse(to: incomingMessage, text: errorMessage))
+            }
+            .catch {
+                self.log.error("Failed to respond to Slack slash command \($0)")
+            }
+    }
+
+    private func response(forType type: KarmaCommandType, on incomingMessage: SlackKitIncomingMessage, statuses: [KarmaStatus]) -> KarmaStatusResponse {
+        switch type {
+        case .leaderboard:
+            return KarmaStatusResponse(forKarmaLeaderboardMessage: incomingMessage, statuses: statuses)
+        case .status:
+            return KarmaStatusResponse(forKarmaStatusMessage: incomingMessage, statuses: statuses)
+        }
+    }
+
+    private enum KarmaCommandType {
+        case leaderboard
+        case status
     }
 }

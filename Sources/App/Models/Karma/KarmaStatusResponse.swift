@@ -9,25 +9,23 @@ import Foundation
 import struct SlackKit.Attachment
 
 class KarmaStatusResponse: SlackKitResponse {
-    enum CodingKeys: String, CodingKey {
-        case text, attachments
-    }
 
-    override func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(text, forKey: .text)
-        try container.encode(attachments, forKey: .attachments)
-    }
-
-    init(forSlashCommandWithKarmaStatuses statuses: [KarmaStatus]) {
-        super.init(to: nil, text: "",
+    init(forKarmaStatusMessage incomingMessage: SlackKitIncomingMessage, statuses: [KarmaStatus]) {
+        super.init(to: incomingMessage,
+                   text: "",
                    attachments: statuses.map { KarmaStatusResponse.slashCommandSlackAttachment(karmaStatus: $0) })
     }
 
     init(forKarmaAdjustingMessage incomingMessage: SlackKitIncomingMessage, receivedKarma: KarmaAdjustment, statusAfterChange karmaStatus: KarmaStatus) {
         super.init(to: incomingMessage,
-                   text: receivedKarma.user.asSlackUserMention(),
-                   attachments: [KarmaStatusResponse.slackAttachment(with: receivedKarma, totalKarma: karmaStatus.count)])
+                   text: "",
+                   attachments: [KarmaStatusResponse.slackAttachment(with: receivedKarma, totalKarma: karmaStatus.count, userId: receivedKarma.user.asSlackUserMention())])
+    }
+
+    init(forKarmaLeaderboardMessage incomingMessage: SlackKitIncomingMessage, statuses: [KarmaStatus]) {
+        super.init(to: incomingMessage,
+                   text: "Karma Leaderboard",
+                   attachments: [KarmaStatusResponse.slackLeaderboardAttachment(with: statuses)])
     }
 }
 
@@ -50,10 +48,10 @@ extension KarmaStatusResponse {
         return karma.count >= 0 ? "increased" : "decreased"
     }
 
-    static func slackAttachment(with receivedKarma: KarmaAdjustment, totalKarma: Int) -> Attachment {
+    static func slackAttachment(with receivedKarma: KarmaAdjustment, totalKarma: Int, userId: String) -> Attachment {
         return Attachment(attachment: ["fallback": defaultMessage(karma: receivedKarma),
                                        "color": messageColor(karmaCount: receivedKarma.count),
-            "text": "Karma \(changed(karma: receivedKarma)) to \(totalKarma) \(emojiRelation(total: totalKarma))"])
+                                       "text": "\(userId) (\(emojiRelation(total: totalKarma))): Karma \(changed(karma: receivedKarma)) to \(totalKarma)"])
     }
 
     static func slashCommandSlackAttachment(karmaStatus: KarmaStatus) -> Attachment {
@@ -62,8 +60,24 @@ extension KarmaStatusResponse {
                                        "text": currentCountText(karmaStatus: karmaStatus, fallback: false)])
     }
 
+    static func slackLeaderboardAttachment(with statuses: [KarmaStatus]) -> Attachment {
+        var fields: [[String:Any]] = [["title": "User", "short": true], ["title": "Karma", "short": true]]
+
+        statuses.forEach { status in
+            fields.append(["value": "\(status.id?.asSlackUserMention() ?? "") (\(emojiRelation(total: status.count)))", "short": true])
+            fields.append(["value": status.count.description, "short": true])
+        }
+
+        return Attachment(attachment: [
+            "fallback": "Leaderboard",
+            "title": "Leaderboard",
+            "pretext": "The users with the most karma are:",
+            "fields": fields
+            ])
+    }
+
     private static func currentCountText(karmaStatus: KarmaStatus, fallback: Bool) -> String {
-        return "\((fallback ? karmaStatus.id : karmaStatus.id?.asSlackUserMention()) ?? "Something") has \(karmaStatus.count) karma \(emojiRelation(total: karmaStatus.count))"
+        return "\((fallback ? karmaStatus.id : karmaStatus.id?.asSlackUserMention()) ?? "Something") (\(emojiRelation(total: karmaStatus.count))): \(karmaStatus.count) karma "
     }
 
     private static func emojiRelation(total: Int) -> String {

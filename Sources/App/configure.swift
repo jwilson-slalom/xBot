@@ -1,10 +1,12 @@
-import FluentSQLite
+import FluentPostgreSQL
+import Leaf
 import Vapor
 
 /// Called before your application initializes.
 public func configure(_ config: inout Config, _ env: inout Environment, _ services: inout Services) throws {
-    // Register providers first
-    try services.register(FluentSQLiteProvider())
+	try services.register(FluentPostgreSQLProvider())
+    try services.register(LeafProvider())
+    config.prefer(LeafRenderer.self, for: ViewRenderer.self)
 
     services.register(Router.self) { container -> EngineRouter in
         let router = EngineRouter.default()
@@ -14,31 +16,41 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
 
     // Register middleware
     var middlewares = MiddlewareConfig() // Create _empty_ middleware config
-    // middlewares.use(FileMiddleware.self) // Serves files from `Public/` directory
+    middlewares.use(FileMiddleware.self)
     middlewares.use(ErrorMiddleware.self) // Catches errors and converts to HTTP response
     services.register(middlewares)
 
-    services.register(SQLiteKarmaStatusRepository.self)
-    services.register(SQLiteKarmaSlackHistoryRepository.self)
+	let config: PostgreSQLDatabaseConfig
+	if let databaseUrl = Environment.get("DATABASE_URL"), let herokuConfig = PostgreSQLDatabaseConfig(url: databaseUrl, transport: .unverifiedTLS) {
+		config = herokuConfig
+	} else {
+		config = PostgreSQLDatabaseConfig(hostname: "localhost", port: 5432, username: "postgres", database: "xbot", password: nil, transport: .cleartext)
+	}
+
+	let postgres = PostgreSQLDatabase(config: config)
+
+    // Register the configured PostgreSQL database to the database config.
+    var databases = DatabasesConfig()
+	databases.add(database: postgres, as: .psql)
+
+    services.register(KarmaStatusRepository.self)
+    services.register(KarmaSlackHistoryRepository.self)
     services.register(RoomController.self)
 
-    // Configure a SQLite database
-    let karmaDB = try SQLiteDatabase(storage: .file(path: "karmaDatabase"))
-
-    // Register the configured SQLite database to the database config.
-    var databases = DatabasesConfig()
-    databases.add(database: karmaDB, as: .sqlite)
     services.register(databases)
 
     // Configure migrations
     var migrations = MigrationConfig()
-    migrations.add(model: KarmaStatus.self, database: .sqlite)
-    migrations.add(model: KarmaSlackHistory.self, database: .sqlite)
+
+    migrations.add(model: KarmaStatus.self, database: .psql)
+    migrations.add(model: KarmaSlackHistory.self, database: .psql)
+
     services.register(migrations)
 
     services.register(OnTapController.self)
     services.register(KarmaController.self)
     services.register(try Secrets.detect(), as: Secrets.self)
     services.register(Slack.self)
-    services.register(SlackListener.self)
+
+    try services.register(SlackListenerProvider())
 }

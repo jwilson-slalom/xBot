@@ -8,15 +8,11 @@
 import SlackKit
 
 protocol SlackResponder {
-    static var serviceName: String { get }
-    var eventTypes: [EventType] { get }
-    func handle(incomingMessage: SlackKitIncomingMessage) throws
-    func handle(event: Event) throws
+    func handle(incomingMessage: SlackKitIncomingMessage, forBotUser botUser: User) throws
+    func handle(event: Event, ofType type: EventType, forBotUser botUser: User) throws
 }
 
 extension SlackResponder {
-    static var serviceName: String { return String(reflecting: self) }
-    var eventTypes: [EventType] { return [.message] }
-    func handle(incomingMessage: SlackKitIncomingMessage) { }
-    func handle(event: Event) { }
+    func handle(incomingMessage: SlackKitIncomingMessage, forBotUser botUser: User) throws { }
+    func handle(event: Event, ofType type: EventType, forBotUser botUser: User) throws { }
 }
