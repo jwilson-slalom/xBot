@@ -55,15 +55,18 @@ struct Slack: SlackMessageSender {
     func send(message: SlackKitSendable, onlyVisibleTo user: String) throws {
         guard let web = slackKit.webAPI else { throw Abort(.internalServerError) }
 
-        if let _ = message.parent {
-            // Not yet supported by SlackKit (should be supported as far as I can tell)
-        } else {
-            web.sendEphemeral(channel: message.channelID.id, text: message.text, user: user, success: { (ts, channel) in
+        // Supports responding in threads
+        web.sendEphemeral(
+            channel: message.channelID.id,
+            text: message.text,
+            user: user,
+            thread: message.parent,
+            attachments: message.attachments,
+            success: { (ts, channel) in
 
             }, failure: { error in
                 self.log.error("Sending ephemeral slack message encounted error: \(error)")
             })
-        }
     }
 }
 
